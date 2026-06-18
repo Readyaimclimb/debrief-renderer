@@ -50,13 +50,11 @@ app.post("/debrief-pdf", async (req, res) => {
   if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
   }
-
   try {
     const { report, ctx, brand } = req.body || {};
     if (!report || !ctx || !brand) {
       return res.status(400).json({ error: "report, ctx, and brand are required" });
     }
-
     const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
     const safeBrand = {
       clientName: brand.clientName || ctx.company || "Client",
@@ -67,19 +65,24 @@ app.post("/debrief-pdf", async (req, res) => {
       blue: brand.blue || "#4F79C2",
       date: brand.date || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     };
-
     const html = buildDebriefHTML({ report, ctx, brand: safeBrand, logoDark });
-
     const browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
     await page.close();
 
+    // page.pdf() returns a Uint8Array in modern Puppeteer. Express's res.send()
+    // only treats a true Node Buffer as binary — a bare Uint8Array falls through
+    // to its object path and gets JSON-serialized ({"0":37,"1":80,...}), which
+    // is a corrupt "PDF" no viewer can open. Wrap it so it streams as real bytes.
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+
     const fname = `${(ctx.candidate || "candidate").replace(/[^a-z0-9]+/gi, "_")}_Debrief.pdf`;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
-    res.status(200).send(pdf);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
   } catch (err) {
     console.error("debrief-pdf error:", err);
     res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
