@@ -90,5 +90,41 @@ app.post("/debrief-pdf", async (req, res) => {
   }
 });
 
+app.post("/roadmap-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { roadmap, ctx, brand } = req.body || {};
+    if (!roadmap || !ctx || !brand) {
+      return res.status(400).json({ error: "roadmap, ctx, and brand are required" });
+    }
+    const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
+    const safeBrand = {
+      clientName: brand.clientName || ctx.company || "Client",
+      navy: brand.navy || "#171758",
+      navyDark: brand.navyDark || "#0A0A34",
+      accent: brand.accent || "#EA6B47",
+      blue: brand.blue || "#4F79C2",
+      date: brand.date || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    };
+    const html = buildRoadmapHTML({ roadmap, ctx, brand: safeBrand, logoDark });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const fname = `${(ctx.role || "role").replace(/[^a-z0-9]+/gi, "_")}_Roadmap.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("roadmap-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Debrief PDF service listening on ${PORT}`));
