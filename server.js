@@ -18,6 +18,7 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const { buildDebriefHTML } = require("./assemble.js");
+const { buildRoadmapHTML } = require("./roadmap-engine.js");
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
