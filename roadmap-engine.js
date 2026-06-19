@@ -1,14 +1,25 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — 30/60/90 Roadmap PDF engine
-//  Matched to the debrief cover treatment exactly: logo at 74px in a flex row
-//  with the accent divider, concentric rings, base glow, structured meta row.
-//  Interior pages reuse the debrief's lightPage/titleBlock, with a roadmap-
-//  specific footer label.
+//  HIRE2SCALE — 30/60/90 Roadmap PDF engine (PAGINATED)
+//  Matches the debrief design standard: debrief cover treatment (rings, glow,
+//  74px logo, meta row), bordered accent-bar cards, navy milestone block.
+//  Like the debrief, it PAGINATES: each phase's blocks are measured and packed
+//  onto pages; when the next block would overflow, the phase continues on a
+//  fresh page with the title repeated "(cont.)". No overflow, ever.
 // ════════════════════════════════════════════════════════════════════════
 const E = require("./debrief-engine.js");
 const { esc, DS_TOKENS, titleBlock } = E;
 
-// Roadmap-specific footer (the shared footer() says "Candidate Debrief").
+// ── geometry budget (px), mirroring pages.js ──
+const PAGE_H = 1056, CONTENT_TOP = 60, FOOTER_RESERVE = 92;
+const USABLE = (PAGE_H - FOOTER_RESERVE) - CONTENT_TOP;   // usable content height
+const TITLE_H = 150;          // title block (eyebrow + h2 + rule + intro)
+const TITLE_CONT_H = 120;     // continued pages: title with no intro
+const BLOCK_GAP = 14;
+
+// evidence wraps ~52 chars/line at 13.5px inside a ~330px half-column;
+// ~70 chars/line in a full-width column.
+function estLines(text, perLine) { return Math.max(1, Math.ceil(String(text || "").length / perLine)); }
+
 function rmFooter(brand, pageNo) {
   return `<div style="position:absolute; left:64px; right:64px; bottom:30px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px; font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint);"><span>${esc(brand.clientName)} · Onboarding Roadmap</span><span>${String(pageNo).padStart(2, "0")}</span></div>`;
 }
@@ -25,7 +36,7 @@ const PHASES = [
   { key: "own",        band: "Days 61–90", title: "Own",        tag: "Fully ramped and on pace toward the 12-month goal" },
 ];
 
-// ── COVER — matched to the debrief cover (rings, glow, 74px logo, meta row) ──
+// ── COVER (debrief treatment) ──
 function coverPage(brand, ctx, logoDark) {
   const logo = logoDark
     ? `<img src="${logoDark}" alt="${esc(brand.clientName)}" style="height:74px; width:auto;">`
@@ -63,15 +74,19 @@ function coverPage(brand, ctx, logoDark) {
   </section>`;
 }
 
-// ── PHASE PAGE — bordered cards with left-accent bars, more breathing room ──
-function phasePage(phase, data, brand, pageNo) {
-  const v = data || {};
-  const m = v.milestone || {};
-  const NAVY = "var(--cd-navy)", ACCENT = "var(--cd-accent)", GOOD = "#2F7D54";
+// ════════════════════════════════════════════════════════════════════════
+//  BLOCK BUILDERS — each returns { html, height }. The paginator packs these.
+// ════════════════════════════════════════════════════════════════════════
+const NAVY = "var(--cd-navy)", ACCENT = "var(--cd-accent)";
 
-  // milestone: navy block (mirrors the debrief's "what the panel established")
-  const milestoneCard = `
-    <div style="background:var(--rac-navy); color:#fff; padding:26px 30px; border-left:4px solid ${ACCENT}; margin-bottom:24px;">
+function milestoneBlock(m) {
+  m = m || {};
+  // header(~44) + outcome lines(@~62/line, 25px) + divider/pad(40) + split rows
+  const outcomeLines = estLines(m.outcome, 62);
+  const splitLines = Math.max(estLines(m.hireKnows, 40), estLines(m.managerKnows, 40));
+  const height = 44 + outcomeLines * 26 + 58 + (24 + splitLines * 20) + 52;
+  const html = `
+    <div style="background:var(--rac-navy); color:#fff; padding:26px 30px; border-left:4px solid ${ACCENT};">
       <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${ACCENT}; margin-bottom:12px;">The Milestone</div>
       <p style="margin:0; font-size:18px; font-weight:700; line-height:1.45; color:#fff;">${esc(m.outcome)}</p>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:20px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.16);">
@@ -79,47 +94,94 @@ function phasePage(phase, data, brand, pageNo) {
         ${m.managerKnows ? `<div><div style="font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#9FB4D4; margin-bottom:6px;">Manager knows they're on track</div><div style="font-size:13.5px; line-height:1.5; color:rgba(255,255,255,0.9);">${esc(m.managerKnows)}</div></div>` : ""}
       </div>
     </div>`;
+  return { html, height };
+}
 
-  // a white bordered card with left-accent bar (the debrief's row treatment)
-  const card = (heading, bodyHTML, accent = ACCENT) => bodyHTML ? `
-    <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${accent}; box-shadow:var(--shadow-card); padding:18px 22px; margin-bottom:14px;">
+function fullCard(heading, bodyHTML, contentHeight, accent = ACCENT) {
+  if (!bodyHTML) return null;
+  const height = 44 + 14 + contentHeight + 36;  // header + pad + content + card padding
+  const html = `
+    <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${accent}; box-shadow:var(--shadow-card); padding:18px 22px;">
       <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${accent}; margin-bottom:10px;">${heading}</div>
       ${bodyHTML}
-    </div>` : "";
-
-  const rels = (v.relationships || []).length
-    ? `<div style="font-size:13.5px; line-height:1.7; color:var(--text-body);">${(v.relationships || []).map(r => `<div style="margin-bottom:3px;"><b style="color:var(--text-strong);">${esc(r.who)}</b>${r.why ? ` — ${esc(r.why)}` : ""}</div>`).join("")}</div>`
-    : "";
-  const ul = (arr) => (arr || []).length
-    ? `<ul style="margin:0; padding-left:20px; font-size:13.5px; line-height:1.7; color:var(--text-body);">${(arr || []).map(x => `<li style="margin-bottom:5px;">${esc(x)}</li>`).join("")}</ul>`
-    : "";
-  const line = (txt) => txt ? `<div style="font-size:13.5px; line-height:1.6; color:var(--text-body);">${esc(txt)}</div>` : "";
-
-  // two-up row for learning + deliverables, as side-by-side bordered cards
-  const learnDeliv = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
-      <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:18px 22px;">
-        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:10px;">Learning Requirements</div>${ul(v.learning)}
-      </div>
-      <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:18px 22px;">
-        <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:10px;">First Deliverables</div>${ul(v.deliverables)}
-      </div>
     </div>`;
+  return { html, height };
+}
 
-  // check-in + escalation as a two-up of compact cards
-  const checkEsc = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-      ${card("Check-in Rhythm", line(v.checkInRhythm))}
-      ${card("When Stuck", line(v.escalation))}
-    </div>`.replace(/margin-bottom:14px;/g, "margin-bottom:0;");
+function relationshipsBlock(rels) {
+  if (!(rels || []).length) return null;
+  const body = `<div style="font-size:13.5px; line-height:1.7; color:var(--text-body);">${rels.map(r => `<div style="margin-bottom:3px;"><b style="color:var(--text-strong);">${esc(r.who)}</b>${r.why ? ` — ${esc(r.why)}` : ""}</div>`).join("")}</div>`;
+  const lines = rels.reduce((n, r) => n + estLines(`${r.who} — ${r.why || ""}`, 88), 0);
+  return fullCard("Key Relationships", body, lines * 23);
+}
 
-  const inner = `
-    ${titleBlock(phase.band, phase.title, { intro: esc(phase.tag), h2size: 40 })}
-    ${milestoneCard}
-    ${card("Key Relationships", rels)}
-    ${learnDeliv}
-    ${checkEsc}`;
-  return rmLightPage(inner, brand, pageNo);
+// two side-by-side cards (learning | deliverables) measured as the taller of the two
+function twoColBlock(learning, deliverables) {
+  const ul = (arr) => (arr || []).length
+    ? `<ul style="margin:0; padding-left:20px; font-size:13.5px; line-height:1.7; color:var(--text-body);">${arr.map(x => `<li style="margin-bottom:5px;">${esc(x)}</li>`).join("")}</ul>`
+    : "";
+  const colCard = (heading, arr) => `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:18px 22px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:10px;">${heading}</div>${ul(arr)}</div>`;
+  if (!(learning || []).length && !(deliverables || []).length) return null;
+  const lLines = (learning || []).reduce((n, x) => n + estLines(x, 40), 0);
+  const dLines = (deliverables || []).reduce((n, x) => n + estLines(x, 40), 0);
+  const contentLines = Math.max(lLines, dLines);
+  const height = 44 + 14 + contentLines * 23 + 36;
+  const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">${colCard("Learning Requirements", learning)}${colCard("First Deliverables", deliverables)}</div>`;
+  return { html, height };
+}
+
+// two side-by-side compact cards (check-in | escalation)
+function checkEscBlock(checkIn, escalation) {
+  if (!checkIn && !escalation) return null;
+  const compactCard = (heading, txt) => txt ? `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:18px 22px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${ACCENT}; margin-bottom:10px;">${heading}</div><div style="font-size:13.5px; line-height:1.6; color:var(--text-body);">${esc(txt)}</div></div>` : `<div></div>`;
+  const lines = Math.max(estLines(checkIn, 40), estLines(escalation, 40));
+  const height = 44 + 14 + lines * 22 + 36;
+  const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">${compactCard("Check-in Rhythm", checkIn)}${compactCard("When Stuck", escalation)}</div>`;
+  return { html, height };
+}
+
+// build the ordered list of blocks for a phase
+function phaseBlocks(data) {
+  const v = data || {};
+  return [
+    milestoneBlock(v.milestone),
+    relationshipsBlock(v.relationships),
+    twoColBlock(v.learning, v.deliverables),
+    checkEscBlock(v.checkInRhythm, v.escalation),
+  ].filter(Boolean);
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  PAGINATOR — packs a phase's blocks onto pages, breaking before overflow.
+//  Returns { html, pageCount }.
+// ════════════════════════════════════════════════════════════════════════
+function paginatePhase(phase, data, brand, startPage) {
+  const blocks = phaseBlocks(data);
+  const pages = [];
+  let i = 0, pageIdx = 0;
+
+  while (i < blocks.length) {
+    const cont = pageIdx > 0;
+    const titleH = cont ? TITLE_CONT_H : TITLE_H;
+    let budget = USABLE - titleH;
+    let body = "";
+    let placed = 0;
+
+    while (i < blocks.length) {
+      const h = blocks[i].height + (placed > 0 ? BLOCK_GAP : 0);
+      if (placed > 0 && budget - h < 0) break;   // would overflow → new page
+      body += (placed > 0 ? `<div style="height:${BLOCK_GAP}px"></div>` : "") + blocks[i].html;
+      budget -= h;
+      i++; placed++;
+    }
+
+    const title = titleBlock(phase.band, phase.title, {
+      cont, intro: cont ? undefined : esc(phase.tag), h2size: 40,
+    });
+    pages.push(rmLightPage(title + body, brand, startPage + pageIdx));
+    pageIdx++;
+  }
+  return { html: pages.join("\n"), pageCount: pageIdx };
 }
 
 function buildRoadmapHTML({ roadmap, ctx, brand, logoDark }) {
@@ -128,7 +190,11 @@ function buildRoadmapHTML({ roadmap, ctx, brand, logoDark }) {
   const out = [coverPage(brand, ctx, logoDark)];
   pageNo++;
   for (const p of PHASES) {
-    if (phases[p.key]) { out.push(phasePage(p, phases[p.key], brand, pageNo)); pageNo++; }
+    if (phases[p.key]) {
+      const res = paginatePhase(p, phases[p.key], brand, pageNo);
+      out.push(res.html);
+      pageNo += res.pageCount;
+    }
   }
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
