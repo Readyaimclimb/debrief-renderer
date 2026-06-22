@@ -9,6 +9,8 @@
 //  Endpoints:
 //    GET  /health        → { status: "ok" }   (Render health check)
 //    POST /debrief-pdf   → application/pdf     (the real work)
+//    POST /roadmap-pdf   → application/pdf
+//    POST /site-colors   → { colors: ["#..", ...] }   (brand colors from a URL)
 //
 //  Why this exists: headless Chromium on Vercel's serverless runtime is
 //  library-fragile (the libnss3 saga). Here, Chrome is installed the normal
@@ -19,6 +21,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const { buildDebriefHTML } = require("./assemble.js");
 const { buildRoadmapHTML } = require("./roadmap-engine.js");
+const { extractDominantColors } = require("./sampler.js");
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -123,6 +126,75 @@ app.post("/roadmap-pdf", async (req, res) => {
   } catch (err) {
     console.error("roadmap-pdf error:", err);
     res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /site-colors ─────────────────────────────────────────────────────────
+//  Load a URL in REAL Chrome (so JS-applied color, image logos, and external
+//  stylesheets all render), screenshot the above-the-fold view, and sample the
+//  dominant BRAND colors a human actually sees. This is the reliable version of
+//  "pull colors from the website" — it sees the rendered page, not the raw HTML,
+//  so it gets a brand's true green/purple instead of structural framework hexes.
+//
+//  Request:  { url }                       (plus x-render-secret if configured)
+//  Response: { colors: ["#aabbcc", ...], readable: true }
+//            { colors: [], readable: false, reason }   on failure (never throws
+//            up the stack so the caller can fall back to logo-color extraction).
+app.post("/site-colors", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  const { url } = req.body || {};
+  if (!url || typeof url !== "string") {
+    return res.status(400).json({ error: "url is required" });
+  }
+
+  // Normalize: prepend https:// when no scheme; reject anything that isn't a
+  // valid http(s) URL so we never hand Chrome garbage.
+  let target;
+  try {
+    const withScheme = /^https?:\/\//i.test(url.trim()) ? url.trim() : "https://" + url.trim();
+    const u = new URL(withScheme);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return res.status(200).json({ colors: [], readable: false, reason: "bad_url" });
+    }
+    target = u.toString();
+  } catch {
+    return res.status(200).json({ colors: [], readable: false, reason: "bad_url" });
+  }
+
+  let page;
+  try {
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 900 });
+    // A real UA helps with sites that sniff for bots.
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    );
+    // Bounded navigation: give the page up to 15s to reach a settled state.
+    await page.goto(target, { waitUntil: "networkidle2", timeout: 15000 });
+    // Small settle for fonts/hero imagery to paint.
+    await new Promise((r) => setTimeout(r, 600));
+
+    const shot = await page.screenshot({ type: "png", fullPage: false });
+    await page.close(); page = null;
+
+    const colors = await extractDominantColors(shot, 6);
+    if (!colors.length) {
+      return res.status(200).json({ colors: [], readable: false, reason: "empty" });
+    }
+    return res.status(200).json({ colors, readable: true });
+  } catch (err) {
+    if (page) { try { await page.close(); } catch (_) {} }
+    // Classify the failure so the caller can show an honest message.
+    const msg = String((err && err.message) || err);
+    let reason = "unreachable";
+    if (/timeout/i.test(msg)) reason = "timeout";
+    else if (/net::ERR_NAME_NOT_RESOLVED|ENOTFOUND/i.test(msg)) reason = "unreachable";
+    else if (/net::ERR_CONNECTION|ECONNREFUSED/i.test(msg)) reason = "server_down";
+    console.error("site-colors error:", msg);
+    return res.status(200).json({ colors: [], readable: false, reason });
   }
 });
 
