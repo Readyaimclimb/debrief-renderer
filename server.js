@@ -21,6 +21,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const { buildDebriefHTML } = require("./assemble.js");
 const { buildRoadmapHTML } = require("./roadmap-engine.js");
+const { buildOneSheetHTML } = require("./assemble-onesheet.js");
 const { extractDominantColors } = require("./sampler.js");
 
 const app = express();
@@ -89,6 +90,47 @@ app.post("/debrief-pdf", async (req, res) => {
     res.status(200).end(pdfBuffer);
   } catch (err) {
     console.error("debrief-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /onesheet-pdf ──────────────────────────────────────────────────────────
+//  The One Sheet interview guide. Same shape as /debrief-pdf: takes the refined
+//  prep_blocks (from the app's /api/onesheet-draft), builds the HTML via the
+//  One Sheet assembler (which reuses debrief-engine.js for one shared styling
+//  system), renders with the same warm Chrome, streams the PDF back.
+app.post("/onesheet-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { prep_blocks, ctx, brand } = req.body || {};
+    if (!prep_blocks || !ctx || !brand) {
+      return res.status(400).json({ error: "prep_blocks, ctx, and brand are required" });
+    }
+    const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
+    const safeBrand = {
+      clientName: brand.clientName || ctx.company || "Client",
+      navy: brand.navy || "#171758",
+      navyDark: brand.navyDark || "#0A0A34",
+      accent: brand.accent || "#EA6B47",
+      contact: brand.contact || "Powered by Ready Aim Climb · readyaimclimb.com",
+    };
+    const html = buildOneSheetHTML({ prep_blocks, ctx, brand: safeBrand, logoDark });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const who = (ctx.candidate || "candidate").replace(/[^a-z0-9]+/gi, "_");
+    const fname = `${who}_OneSheet.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("onesheet-pdf error:", err);
     res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
   }
 });
