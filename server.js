@@ -21,6 +21,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const { buildDebriefHTML } = require("./assemble.js");
 const { buildRoadmapHTML } = require("./roadmap-engine.js");
+const { buildJobAdHTML } = require("./jobad-engine.js");
 const { buildOneSheetHTML } = require("./assemble-onesheet.js");
 const { extractDominantColors } = require("./sampler.js");
 
@@ -143,18 +144,7 @@ app.post("/roadmap-pdf", async (req, res) => {
   try {
     const { roadmap, ctx, brand } = req.body || {};
     if (!roadmap || !ctx || !brand) {
-      // TEMP DIAGNOSTIC (remove once B2 is fixed): report exactly what arrived so
-      // we can see whether the body parsed at all, and which field came back empty.
-      const seen = {
-        bodyType: typeof req.body,
-        topLevelKeys: req.body && typeof req.body === "object" ? Object.keys(req.body) : null,
-        hasRoadmap: !!roadmap,
-        hasCtx: !!ctx,
-        hasBrand: !!brand,
-        rawSnippet: typeof req.body === "string" ? req.body.slice(0, 200) : undefined,
-      };
-      console.error("roadmap-pdf 400 — received:", JSON.stringify(seen));
-      return res.status(400).json({ error: "roadmap, ctx, and brand are required", seen });
+      return res.status(400).json({ error: "roadmap, ctx, and brand are required" });
     }
     const logoDark = brand.logoDark || "";
     const safeBrand = {
@@ -179,6 +169,46 @@ app.post("/roadmap-pdf", async (req, res) => {
     res.status(200).end(pdfBuffer);
   } catch (err) {
     console.error("roadmap-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /jobad-pdf ─────────────────────────────────────────────────────────────
+//  The branded Job Ad PDF. Same shape as the other endpoints: takes the
+//  assembled jobad (from the app's buildJobAd()), builds the HTML via the job
+//  ad engine, renders with the same warm Chrome, streams the PDF back.
+app.post("/jobad-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { jobad, ctx, brand } = req.body || {};
+    if (!jobad || !ctx || !brand) {
+      return res.status(400).json({ error: "jobad, ctx, and brand are required" });
+    }
+    const logoDark = brand.logoDark || "";
+    const safeBrand = {
+      clientName: brand.clientName || ctx.company || "Client",
+      navy: brand.navy || "#171758",
+      navyDark: brand.navyDark || "#0A0A34",
+      accent: brand.accent || "#EA6B47",
+      blue: brand.blue || "#4F79C2",
+      date: brand.date || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    };
+    const html = buildJobAdHTML({ jobad, ctx, brand: safeBrand, logoDark });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const fname = `${(ctx.role || "role").replace(/[^a-z0-9]+/gi, "_")}_JobAd.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("jobad-pdf error:", err);
     res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
   }
 });
