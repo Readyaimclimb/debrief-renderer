@@ -30,8 +30,8 @@ function darkShell(inner, brand) {
 function coverPage(ctx, brand, logoDark) {
   const accent = brand.accent || "#EA6B47";
   const logo = logoDark
-    ? `<img src="${logoDark}" alt="" style="height:64px; margin-bottom:40px;"/>`
-    : "";
+    ? `<img src="${logoDark}" alt="${esc(brand.clientName || "")}" style="height:64px; margin-bottom:40px;"/>`
+    : `<div style="font-weight:900; font-size:30px; letter-spacing:-0.01em; color:#fff; margin-bottom:40px;">${esc(brand.clientName || "")}</div>`;
   return darkShell(`
     <div style="height:100%; display:flex; flex-direction:column;">
       <div style="text-align:center; padding-top:40px;">
@@ -183,7 +183,7 @@ function debriefPage(brand, pageNo) {
 
 function ctaPage(ctx, brand, logoDark) {
   const accent = brand.accent || "#EA6B47";
-  const logo = logoDark ? `<img src="${logoDark}" alt="" style="height:54px; margin-bottom:36px;"/>` : "";
+  const logo = logoDark ? `<img src="${logoDark}" alt="${esc(brand.clientName || "")}" style="height:54px; margin-bottom:36px;"/>` : `<div style="font-weight:900; font-size:26px; letter-spacing:-0.01em; color:#fff; margin-bottom:36px;">${esc(brand.clientName || "")}</div>`;
   return darkShell(`
     <div style="height:100%; display:flex; flex-direction:column; justify-content:center;">
       ${logo}
