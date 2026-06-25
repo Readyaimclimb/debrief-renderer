@@ -10,11 +10,11 @@ const E = require("./debrief-engine.js");
 const { esc, DS_TOKENS, titleBlock } = E;
 
 // ── geometry budget (px), mirroring pages.js ──
-const PAGE_H = 1056, CONTENT_TOP = 60, FOOTER_RESERVE = 92;
+const PAGE_H = 1056, CONTENT_TOP = 56, FOOTER_RESERVE = 80;
 const USABLE = (PAGE_H - FOOTER_RESERVE) - CONTENT_TOP;   // usable content height
-const TITLE_H = 150;          // title block (eyebrow + h2 + rule + intro)
-const TITLE_CONT_H = 120;     // continued pages: title with no intro
-const BLOCK_GAP = 14;
+const TITLE_H = 128;          // title block (eyebrow + h2 + rule + intro) — tuned to real render height
+const TITLE_CONT_H = 104;     // continued pages: title with no intro
+const BLOCK_GAP = 12;
 
 // evidence wraps ~52 chars/line at 13.5px inside a ~330px half-column;
 // ~70 chars/line in a full-width column.
@@ -84,7 +84,7 @@ function milestoneBlock(m) {
   // header(~44) + outcome lines(@~62/line, 25px) + divider/pad(40) + split rows
   const outcomeLines = estLines(m.outcome, 62);
   const splitLines = Math.max(estLines(m.hireKnows, 40), estLines(m.managerKnows, 40));
-  const height = 44 + outcomeLines * 26 + 58 + (24 + splitLines * 20) + 52;
+  const height = 40 + outcomeLines * 25 + 50 + (22 + splitLines * 19) + 40;
   const html = `
     <div style="background:var(--rac-navy); color:#fff; padding:26px 30px; border-left:4px solid ${ACCENT};">
       <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${ACCENT}; margin-bottom:12px;">The Milestone</div>
@@ -99,7 +99,7 @@ function milestoneBlock(m) {
 
 function fullCard(heading, bodyHTML, contentHeight, accent = ACCENT) {
   if (!bodyHTML) return null;
-  const height = 44 + 14 + contentHeight + 36;  // header + pad + content + card padding
+  const height = 40 + 12 + contentHeight + 28;
   const html = `
     <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${accent}; box-shadow:var(--shadow-card); padding:18px 22px;">
       <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${accent}; margin-bottom:10px;">${heading}</div>
@@ -112,7 +112,7 @@ function relationshipsBlock(rels) {
   if (!(rels || []).length) return null;
   const body = `<div style="font-size:13.5px; line-height:1.7; color:var(--text-body);">${rels.map(r => `<div style="margin-bottom:3px;"><b style="color:var(--text-strong);">${esc(r.who)}</b>${r.why ? ` — ${esc(r.why)}` : ""}</div>`).join("")}</div>`;
   const lines = rels.reduce((n, r) => n + estLines(`${r.who} — ${r.why || ""}`, 88), 0);
-  return fullCard("Key Relationships", body, lines * 23);
+  return fullCard("Key Relationships", body, lines * 22);
 }
 
 // two side-by-side cards (learning | deliverables) measured as the taller of the two
@@ -125,7 +125,7 @@ function twoColBlock(learning, deliverables) {
   const lLines = (learning || []).reduce((n, x) => n + estLines(x, 40), 0);
   const dLines = (deliverables || []).reduce((n, x) => n + estLines(x, 40), 0);
   const contentLines = Math.max(lLines, dLines);
-  const height = 44 + 14 + contentLines * 23 + 36;
+  const height = 40 + 12 + contentLines * 22 + 28;
   const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">${colCard("Learning Requirements", learning)}${colCard("First Deliverables", deliverables)}</div>`;
   return { html, height };
 }
@@ -135,7 +135,7 @@ function checkEscBlock(checkIn, escalation) {
   if (!checkIn && !escalation) return null;
   const compactCard = (heading, txt) => txt ? `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:18px 22px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${ACCENT}; margin-bottom:10px;">${heading}</div><div style="font-size:13.5px; line-height:1.6; color:var(--text-body);">${esc(txt)}</div></div>` : `<div></div>`;
   const lines = Math.max(estLines(checkIn, 40), estLines(escalation, 40));
-  const height = 44 + 14 + lines * 22 + 36;
+  const height = 40 + 12 + lines * 21 + 28;
   const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">${compactCard("Check-in Rhythm", checkIn)}${compactCard("When Stuck", escalation)}</div>`;
   return { html, height };
 }
