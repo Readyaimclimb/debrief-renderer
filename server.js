@@ -27,10 +27,11 @@ const { extractDominantColors } = require("./sampler.js");
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
-// Baked CD fallback logo (transparent on-dark knockout) — used when the
-// request doesn't supply brand.logoDark. Real clients pass their own.
-const CD_FALLBACK_LOGO_DARK = "data:image/png;base64," +
-  fs.readFileSync(__dirname + "/cdlogo_dark_t.png.txt", "utf8").trim();
+// White-label safety: there is NO baked-in fallback logo. If a request does not
+// supply brand.logoDark, we pass an empty value downstream and the page builders
+// render the client's NAME as a styled wordmark instead. A missing logo must
+// never cause one client's PDF to borrow another client's (or RAC's) logo.
+// (The old CD_FALLBACK_LOGO_DARK was removed for exactly this reason.)
 
 // ── optional shared secret: only requests that know this token are served.
 //    Set RENDER_SHARED_SECRET on Render; the Vercel forwarder sends it. ──
@@ -60,7 +61,7 @@ app.post("/debrief-pdf", async (req, res) => {
     if (!report || !ctx || !brand) {
       return res.status(400).json({ error: "report, ctx, and brand are required" });
     }
-    const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
+    const logoDark = brand.logoDark || "";
     const safeBrand = {
       clientName: brand.clientName || ctx.company || "Client",
       clientShort: brand.clientShort || undefined,
@@ -108,7 +109,7 @@ app.post("/onesheet-pdf", async (req, res) => {
     if (!prep_blocks || !ctx || !brand) {
       return res.status(400).json({ error: "prep_blocks, ctx, and brand are required" });
     }
-    const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
+    const logoDark = brand.logoDark || "";
     const safeBrand = {
       clientName: brand.clientName || ctx.company || "Client",
       navy: brand.navy || "#171758",
@@ -144,7 +145,7 @@ app.post("/roadmap-pdf", async (req, res) => {
     if (!roadmap || !ctx || !brand) {
       return res.status(400).json({ error: "roadmap, ctx, and brand are required" });
     }
-    const logoDark = brand.logoDark || CD_FALLBACK_LOGO_DARK;
+    const logoDark = brand.logoDark || "";
     const safeBrand = {
       clientName: brand.clientName || ctx.company || "Client",
       navy: brand.navy || "#171758",
