@@ -143,7 +143,18 @@ app.post("/roadmap-pdf", async (req, res) => {
   try {
     const { roadmap, ctx, brand } = req.body || {};
     if (!roadmap || !ctx || !brand) {
-      return res.status(400).json({ error: "roadmap, ctx, and brand are required" });
+      // TEMP DIAGNOSTIC (remove once B2 is fixed): report exactly what arrived so
+      // we can see whether the body parsed at all, and which field came back empty.
+      const seen = {
+        bodyType: typeof req.body,
+        topLevelKeys: req.body && typeof req.body === "object" ? Object.keys(req.body) : null,
+        hasRoadmap: !!roadmap,
+        hasCtx: !!ctx,
+        hasBrand: !!brand,
+        rawSnippet: typeof req.body === "string" ? req.body.slice(0, 200) : undefined,
+      };
+      console.error("roadmap-pdf 400 — received:", JSON.stringify(seen));
+      return res.status(400).json({ error: "roadmap, ctx, and brand are required", seen });
     }
     const logoDark = brand.logoDark || "";
     const safeBrand = {
