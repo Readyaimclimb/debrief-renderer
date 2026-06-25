@@ -28,7 +28,9 @@ function coverPage(report, ctx, brand, logoDark) {
     <div style="position:absolute; inset:0; padding:64px; display:flex; flex-direction:column; z-index:1;">
       <div style="display:flex; align-items:center; justify-content:space-between;">
         <div style="display:flex; align-items:center; gap:18px;">
-          <img src="${logoDark}" alt="${esc(brand.clientName)}" style="height:74px; width:auto;">
+          ${logoDark
+            ? `<img src="${logoDark}" alt="${esc(brand.clientName)}" style="height:74px; width:auto;">`
+            : `<div style="font-weight:900; font-size:34px; letter-spacing:-0.01em; color:#fff;">${esc(brand.clientName)}</div>`}
           <div style="border-left:1px solid rgba(255,255,255,0.22); padding-left:18px; font-weight:700; font-size:9px; letter-spacing:0.24em; text-transform:uppercase; color:var(--cd-accent); line-height:1.7;">Structured<br>Hiring</div>
         </div>
         <span style="font-size:11px; font-weight:700; letter-spacing:0.2em; text-transform:uppercase; color:rgba(255,255,255,0.5);">Confidential</span>
@@ -231,7 +233,9 @@ function closingPage(report, ctx, brand, logoDark, pageNo) {
           <span style="font-size:12px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--cd-accent);">Still untested</span>
           <h2 style="margin:12px 0 0; font-weight:900; font-size:44px; line-height:0.98; letter-spacing:-0.025em;">What nobody asked,<br>ask next</h2>
         </div>
-        <img src="${logoDark}" alt="${esc(brand.clientName)}" style="height:66px; width:auto; margin-top:6px;">
+        ${logoDark
+          ? `<img src="${logoDark}" alt="${esc(brand.clientName)}" style="height:66px; width:auto; margin-top:6px;">`
+          : `<div style="font-weight:900; font-size:30px; letter-spacing:-0.01em; color:#fff; margin-top:6px; text-align:right;">${esc(brand.clientName)}</div>`}
       </div>
       <div style="width:72px; height:4px; background:var(--cd-accent); margin:26px 0 30px;"></div>
       <div style="display:grid; gap:18px;">${gaps}</div>
