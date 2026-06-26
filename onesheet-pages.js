@@ -37,7 +37,7 @@ function coverPage(ctx, brand, logoDark) {
       <div style="text-align:center; padding-top:40px;">
         ${logo}
         <div style="font-size:13px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.6);">
-          The One Sheet · Interview Guide
+          Interview Guide
         </div>
       </div>
       <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
