@@ -134,6 +134,91 @@ function blockPage(block, eyebrowLabel, brand, pageNo) {
   return E.lightPage(inner, brand, pageNo);
 }
 
+// ── skills page (leg 4) — name / walk-through probe / how-to-verify ──
+// Skills have NO green/red flags — they're verified by demonstration, not
+// scored as behavioral answers. Each skill is a card: the probe is the
+// interview question, the verify note is the honest "how to confirm it for
+// real" step (ride-along, work sample, scenario). Owner-editable suggestions.
+function skillsPage(block, eyebrowLabel, brand, pageNo) {
+  const accent = brand.accent || "#EA6B47";
+  const intro = (block.intro || "").split(". ")[0].replace(/\.$/, "") + ".";
+  const skills = block.skills || [];
+
+  const cards = skills.map((s) => `
+    <div style="break-inside:avoid; background:var(--rac-white); border:1px solid var(--border-subtle);
+        border-left:4px solid ${accent}; border-radius:8px; padding:16px 20px; margin-bottom:13px;">
+      <div style="font-weight:700; font-size:15px; color:var(--text-strong); margin-bottom:8px;">${esc(s.name)}</div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cd-accent); margin-bottom:4px;">
+        Ask them to walk you through it
+      </div>
+      <div style="font-size:13px; line-height:1.5; color:var(--text-body); margin-bottom:12px;">${esc(s.probe)}</div>
+      <div style="display:flex; gap:9px; background:var(--rac-off-white); border-radius:6px; padding:10px 13px;">
+        <span style="flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); padding-top:1px;">Verify</span>
+        <span style="font-size:12.5px; line-height:1.45; color:var(--text-body);">${esc(s.verify)}</span>
+      </div>
+    </div>`).join("");
+
+  const inner = `
+    <div style="break-inside:avoid;">
+      ${E.titleBlock(eyebrowLabel, block.name, { intro, h2size: 30 })}
+      <div style="font-size:13px; line-height:1.5; color:var(--text-muted); margin:6px 0 16px;">
+        <strong style="color:var(--text-body);">Purpose:</strong> ${esc(block.purpose)}
+      </div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--cd-accent); margin-bottom:10px;">
+        Skills to probe &amp; verify
+      </div>
+      ${cards}
+    </div>`;
+  return E.lightPage(inner, brand, pageNo);
+}
+
+// ── PI job-fit page — LOCKED capability card (leg 3, no-PI / awaiting-data) ──
+// Advertises the capability using the role only — never a fabricated candidate
+// read. When the live per-drive engine is wired, a separate livePiPage renders
+// the real predictions; this locked card is the honest FOMO state.
+function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
+  const accent = brand.accent || "#EA6B47";
+  const navy = brand.navy || "#171758";
+  const cap = block.capability || {};
+  const bullets = (cap.bullets || []).map((b) => `
+    <div style="display:flex; gap:10px; margin-bottom:10px; font-size:13.5px; line-height:1.5; color:rgba(255,255,255,0.9);">
+      <span style="flex:0 0 auto; color:${accent}; font-weight:900;">+</span>
+      <span>${esc(b)}</span>
+    </div>`).join("");
+
+  const inner = `
+    <div style="break-inside:avoid;">
+      ${E.titleBlock(eyebrowLabel, block.name, { intro: (block.intro || ""), h2size: 30 })}
+      <div style="font-size:13px; line-height:1.5; color:var(--text-muted); margin:6px 0 18px;">
+        <strong style="color:var(--text-body);">Purpose:</strong> ${esc(block.purpose)}
+      </div>
+      <div style="position:relative; background:linear-gradient(160deg, ${navy} 0%, ${brand.navyDark || "#0A0A34"} 100%);
+          border-radius:12px; padding:28px 30px; color:#fff; overflow:hidden;">
+        <div style="position:absolute; top:18px; right:22px; font-size:11px; font-weight:700; letter-spacing:0.1em;
+            text-transform:uppercase; color:rgba(255,255,255,0.55);">🔒 PI only</div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${accent}; margin-bottom:10px;">
+          What PI adds to this role
+        </div>
+        <div style="font-size:20px; font-weight:800; line-height:1.25; letter-spacing:-0.01em; margin-bottom:14px; max-width:560px;">
+          ${esc(cap.headline || "")}
+        </div>
+        <p style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.82); margin:0 0 20px; max-width:580px;">
+          ${esc(cap.roleLine || "")}
+        </p>
+        ${bullets}
+        <div style="border-top:1px solid rgba(255,255,255,0.15); margin-top:18px; padding-top:16px; display:flex;
+            align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+          <span style="font-size:12.5px; line-height:1.45; color:rgba(255,255,255,0.65); max-width:360px;">
+            ${esc(cap.honest || "")}
+          </span>
+          <span style="flex:0 0 auto; background:${accent}; color:#fff; font-weight:700; font-size:13px;
+              padding:11px 20px; border-radius:6px;">${esc(cap.cta || "See how PI fits this role")}&nbsp;→</span>
+        </div>
+      </div>
+    </div>`;
+  return E.lightPage(inner, brand, pageNo);
+}
+
 // ── section divider (light, big statement) ──
 function dividerPage(eyebrow, headline, lead, brand, pageNo) {
   const accent = brand.accent || "#EA6B47";
@@ -205,5 +290,5 @@ function ctaPage(ctx, brand, logoDark) {
 }
 
 module.exports = {
-  coverPage, howToPage, blockPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
+  coverPage, howToPage, blockPage, skillsPage, lockedPiPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
 };
