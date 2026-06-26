@@ -12,6 +12,8 @@ function buildOneSheetHTML({ prep_blocks, ctx, brand, logoDark }) {
   const blocks = prep_blocks || [];
   const valBlocks = blocks.filter((b) => b.lane === "values");
   const cmpBlocks = blocks.filter((b) => b.lane === "competencies");
+  const piBlocks = blocks.filter((b) => b.lane === "pi");
+  const sklBlocks = blocks.filter((b) => b.lane === "skills");
 
   let pageNo = 0;       // cover is uncounted; first interior is 01
   const out = [];
@@ -41,11 +43,33 @@ function buildOneSheetHTML({ prep_blocks, ctx, brand, logoDark }) {
     out.push(P.blockPage(b, "Role competency", brand, pageNo));
   }
 
-  // 5 · debrief decision page
+  // 5 · PI job-fit (the moat). Locked card today (capability only); flips to
+  // live per-drive predictions once the candidate Job-Fit data path is wired.
+  // Routed through lockedPiPage when the block is locked; a future livePiPage
+  // handles the live state. Skipped entirely if no PI block was generated.
+  for (const b of piBlocks) {
+    pageNo++;
+    out.push(P.dividerPage("PI job-fit", "Will the fit last.",
+      "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.", brand, pageNo));
+    pageNo++;
+    out.push(P.lockedPiPage(b, "PI job-fit", brand, pageNo));
+  }
+
+  // 6 · Skills check (leg 4). Owner-editable suggestions: a walk-through probe
+  // plus an honest "how to verify" step per skill. Skipped if none generated.
+  for (const b of sklBlocks) {
+    pageNo++;
+    out.push(P.dividerPage("Skills check", "Can they do the work.",
+      "Values and competencies tell you who they are. This tells you whether they can actually do the job — verified, not assumed.", brand, pageNo));
+    pageNo++;
+    out.push(P.skillsPage(b, "Role skills", brand, pageNo));
+  }
+
+  // 7 · debrief decision page
   pageNo++;
   out.push(P.debriefPage(brand, pageNo));
 
-  // 6 · CTA (dark, uncounted tail)
+  // 8 · CTA (dark, uncounted tail)
   out.push(P.ctaPage(ctx, brand, logoDark));
 
   const accent = brand.accent || "#EA6B47";
