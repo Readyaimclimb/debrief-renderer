@@ -159,6 +159,23 @@ function piFitPanel(lines) {
   return { html, height };
 }
 
+// ── PI FOMO lock (Job Ad). When PI is NOT on for this client, show a small navy
+// teaser where the fit panel would be: what PI would add to this ad if enabled.
+// Role-only, no candidate, no verdict — the honest FOMO engine, matching the
+// One Sheet's locked card. Returns null unless explicitly asked (locked===true),
+// so nothing changes for a client who simply has no PI panel for other reasons.
+function piLockedPanel(roleTitle) {
+  const navy = "var(--cd-navy)";
+  const height = 188;
+  const html = `<div style="position:relative; background:${navy}; border-radius:10px; padding:18px 22px; color:#fff; overflow:hidden;">
+    <div style="position:absolute; top:14px; right:18px; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.5);">🔒 With PI</div>
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--cd-accent); margin-bottom:8px;">Make this ad a magnet</div>
+    <div style="font-size:15px; font-weight:800; line-height:1.3; margin-bottom:10px; max-width:520px;">Show the right person they're built for this role — before they apply</div>
+    <p style="font-size:12.5px; line-height:1.55; color:rgba(255,255,255,0.82); margin:0; max-width:540px;">With Predictive Index, this ad names how ${esc(roleTitle || "this role")} is actually wired — so the people who fit it lean in, and the people who don't quietly self-select out. Fewer wrong applicants, more right ones.</p>
+  </div>`;
+  return { html, height };
+}
+
 // the navy pay-range callout
 function payCallout(payRange, growthPath) {
   if (!payRange) return null;
@@ -194,7 +211,11 @@ function sectionBlocks(key, data) {
     proseBlock(d.intro),
     ...(d.values || []).map((v) => valueCard(v.name, v.line)),
   ].filter(Boolean);
-  if (key === "candidate") return [proseBlock(d.summary), thrivePanel(d.youThrive), piFitPanel(d.piFit)].filter(Boolean);
+  if (key === "candidate") {
+    const piBlock = (d.piFit && d.piFit.length) ? piFitPanel(d.piFit)
+      : (d.piLocked ? piLockedPanel(d.roleTitle || "this role") : null);
+    return [proseBlock(d.summary), thrivePanel(d.youThrive), piBlock].filter(Boolean);
+  }
   if (key === "role") return [
     listBlock("Key Responsibilities", d.responsibilities),
     listBlock("What Success Looks Like", d.expectations),
