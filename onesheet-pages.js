@@ -219,6 +219,81 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
   return E.lightPage(inner, brand, pageNo);
 }
 
+// ── PI job-fit page — LIVE per-drive predictions (leg 3, PI + target + cand) ──
+// Renders the real align/stretch read from block.drives (built by the engine in
+// api/_lib/piLiveBlock.js). Stretches are gaps worth probing (a question + a
+// First-90 plan); aligns are strengths to confirm. ALL copy here is OUR voice —
+// the engine never emits PI's prose, and this page never adds any. The guardrail
+// line keeps the "lens, not a verdict" promise visible. Paginates defensively:
+// if there are many drives, the page can run long, so each drive card is
+// break-inside:avoid and we cap the per-page set, continuing on a fresh page.
+function livePiPage(block, eyebrowLabel, brand, pageNo) {
+  const good = TOKEN_HEX.good, danger = TOKEN_HEX.danger, mixed = TOKEN_HEX.mixed;
+  const accent = brand.accent || "#EA6B47";
+  const drives = block.drives || [];
+  const intro = (block.intro || "").split(". ")[0].replace(/\.$/, "") + ".";
+
+  // One card per drive. Align → green "confirm" card. Stretch → amber-bordered
+  // card with the plain read, the interview probe, and the First-90 manager note.
+  const driveCard = (d) => {
+    if (d.direction === "align") {
+      return `
+      <div style="break-inside:avoid; background:var(--rac-white); border:1px solid var(--border-subtle);
+          border-left:4px solid ${good}; border-radius:8px; padding:14px 18px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px;">
+          <span style="font-weight:700; font-size:14px; color:var(--text-strong);">${esc(d.label)}</span>
+          <span style="flex:0 0 auto; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+              color:${good}; background:${E.TOKEN_BG.good}; padding:4px 10px; border-radius:20px;">Natural fit</span>
+        </div>
+        <div style="font-size:13px; line-height:1.5; color:var(--text-body);">${esc(d.read)}</div>
+      </div>`;
+    }
+    return `
+      <div style="break-inside:avoid; background:var(--rac-white); border:1px solid var(--border-subtle);
+          border-left:4px solid ${mixed}; border-radius:8px; padding:16px 20px; margin-bottom:13px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
+          <span style="font-weight:700; font-size:14px; color:var(--text-strong);">${esc(d.label)}</span>
+          <span style="flex:0 0 auto; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+              color:${mixed}; background:${E.TOKEN_BG.mixed}; padding:4px 10px; border-radius:20px;">Worth probing</span>
+        </div>
+        <div style="font-size:13px; line-height:1.5; color:var(--text-body); margin-bottom:12px;">${esc(d.read)}</div>
+        ${d.probe ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--cd-accent); margin-bottom:4px;">Ask in the interview</div>
+        <div style="font-size:13px; line-height:1.5; color:var(--text-body); margin-bottom:12px;">${esc(d.probe)}</div>` : ""}
+        ${d.first90 ? `<div style="display:flex; gap:9px; background:var(--rac-off-white); border-radius:6px; padding:10px 13px;">
+          <span style="flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); padding-top:1px;">First 90</span>
+          <span style="font-size:12.5px; line-height:1.45; color:var(--text-body);">${esc(d.first90)}</span>
+        </div>` : ""}
+      </div>`;
+  };
+
+  const stretches = drives.filter((d) => d.direction === "stretch");
+  const aligns = drives.filter((d) => d.direction === "align");
+  // Order: stretches first (the gaps that need work), then aligns (confirm).
+  const ordered = [...stretches, ...aligns];
+
+  const summaryLine = stretches.length === 0
+    ? `Every drive this role targets sits inside the range — a strong natural fit. Use the questions below to confirm.`
+    : `${stretches.length === 1 ? "One drive runs" : stretches.length + " drives run"} against what this seat needs — ${stretches.length === 1 ? "it's" : "they're"} worth probing. The rest are a natural fit to confirm.`;
+
+  const inner = `
+    <div style="break-inside:avoid;">
+      ${E.titleBlock(eyebrowLabel, block.name, { intro, h2size: 30 })}
+      <div style="font-size:13px; line-height:1.5; color:var(--text-muted); margin:6px 0 14px;">
+        <strong style="color:var(--text-body);">Purpose:</strong> ${esc(block.purpose)}
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+        <span style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:${good}; background:${E.TOKEN_BG.good}; padding:4px 10px; border-radius:20px;">${aligns.length} natural fit</span>
+        <span style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:${mixed}; background:${E.TOKEN_BG.mixed}; padding:4px 10px; border-radius:20px;">${stretches.length} to probe</span>
+        <span style="font-size:12.5px; line-height:1.4; color:var(--text-muted);">${esc(summaryLine)}</span>
+      </div>
+    </div>
+    ${ordered.map(driveCard).join("")}
+    <div style="margin-top:6px; font-size:11.5px; line-height:1.45; color:var(--text-faint); font-style:italic;">
+      ${esc(GUARDRAIL)}
+    </div>`;
+  return E.lightPage(inner, brand, pageNo);
+}
+
 // ── section divider (light, big statement) ──
 function dividerPage(eyebrow, headline, lead, brand, pageNo) {
   const accent = brand.accent || "#EA6B47";
@@ -290,5 +365,5 @@ function ctaPage(ctx, brand, logoDark) {
 }
 
 module.exports = {
-  coverPage, howToPage, blockPage, skillsPage, lockedPiPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
+  coverPage, howToPage, blockPage, skillsPage, lockedPiPage, livePiPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
 };
