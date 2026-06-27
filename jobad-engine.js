@@ -141,6 +141,24 @@ function thrivePanel(items) {
   return { html, height };
 }
 
+// ── PI behavioral-fit panel (role target → attraction copy). Sourced from the
+// role's PI target only — NO candidate, NO verdict. Speaks to the reader in 2nd
+// person ("you're at your best when…") so the right person leans in and the
+// wrong one self-selects out. Skipped entirely when no lines are supplied, so a
+// non-PI ad is unchanged. All copy is OUR plain language (see piTargetLanguage).
+function piFitPanel(lines) {
+  const arr = (lines || []).filter(Boolean);
+  if (!arr.length) return null;
+  const lineCount = arr.reduce((n, x) => n + estLines(x, 60), 0);
+  const height = 34 + lineCount * 26 + 30;
+  const lis = arr.map((x) => `<div style="display:flex; gap:9px; margin-bottom:8px; font-size:13px; line-height:1.55; color:var(--text-body);"><span style="flex:0 0 auto; color:${ACCENT}; font-weight:900;">✓</span><span>${esc(x)}</span></div>`).join("");
+  const html = `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:16px 20px;">
+    <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${ACCENT}; margin-bottom:10px;">How this role is wired — and who fits it</div>
+    ${lis}
+  </div>`;
+  return { html, height };
+}
+
 // the navy pay-range callout
 function payCallout(payRange, growthPath) {
   if (!payRange) return null;
@@ -176,7 +194,7 @@ function sectionBlocks(key, data) {
     proseBlock(d.intro),
     ...(d.values || []).map((v) => valueCard(v.name, v.line)),
   ].filter(Boolean);
-  if (key === "candidate") return [proseBlock(d.summary), thrivePanel(d.youThrive)].filter(Boolean);
+  if (key === "candidate") return [proseBlock(d.summary), thrivePanel(d.youThrive), piFitPanel(d.piFit)].filter(Boolean);
   if (key === "role") return [
     listBlock("Key Responsibilities", d.responsibilities),
     listBlock("What Success Looks Like", d.expectations),
