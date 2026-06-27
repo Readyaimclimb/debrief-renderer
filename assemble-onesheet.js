@@ -43,16 +43,22 @@ function buildOneSheetHTML({ prep_blocks, ctx, brand, logoDark }) {
     out.push(P.blockPage(b, "Role competency", brand, pageNo));
   }
 
-  // 5 · PI job-fit (the moat). Locked card today (capability only); flips to
-  // live per-drive predictions once the candidate Job-Fit data path is wired.
-  // Routed through lockedPiPage when the block is locked; a future livePiPage
-  // handles the live state. Skipped entirely if no PI block was generated.
+  // 5 · PI job-fit (the moat). LIVE per-drive predictions when the candidate
+  // Job-Fit data path resolved (block.live / not locked); otherwise the honest
+  // LOCKED capability card. The divider lead shifts to match: a candidate read
+  // when live, a capability pitch when locked.
   for (const b of piBlocks) {
+    const isLive = b.live === true && b.locked !== true;
     pageNo++;
     out.push(P.dividerPage("PI job-fit", "Will the fit last.",
-      "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.", brand, pageNo));
+      isLive
+        ? "Where this person's natural wiring fits the seat — and where it stretches. The stretches are what to probe, and what to support in the first 90 days."
+        : "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.",
+      brand, pageNo));
     pageNo++;
-    out.push(P.lockedPiPage(b, "PI job-fit", brand, pageNo));
+    out.push(isLive
+      ? P.livePiPage(b, "PI job-fit", brand, pageNo)
+      : P.lockedPiPage(b, "PI job-fit", brand, pageNo));
   }
 
   // 6 · Skills check (leg 4). Owner-editable suggestions: a walk-through probe
