@@ -47,18 +47,30 @@ function buildOneSheetHTML({ prep_blocks, ctx, brand, logoDark }) {
   // Job-Fit data path resolved (block.live / not locked); otherwise the honest
   // LOCKED capability card. The divider lead shifts to match: a candidate read
   // when live, a capability pitch when locked.
+  // 5 · PI job-fit (the moat). Three routes, by block state:
+  //   live        — real per-drive predictions (block.live, not locked).
+  //   needs-match — PI on + role target ready, but this candidate isn't matched
+  //                 to PI (block.needsMatch). A quiet "add their email" card —
+  //                 fail-loud, never the FOMO teaser. The divider lead names the
+  //                 gap honestly rather than pitching a candidate read it can't show.
+  //   locked      — PI off / awaiting data. The honest capability (FOMO) card.
   for (const b of piBlocks) {
     const isLive = b.live === true && b.locked !== true;
+    const needsMatch = b.needsMatch === true && !isLive;
     pageNo++;
     out.push(P.dividerPage("PI job-fit", "Will the fit last.",
       isLive
         ? "Where this person's natural wiring fits the seat — and where it stretches. The stretches are what to probe, and what to support in the first 90 days."
-        : "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.",
+        : needsMatch
+          ? "PI is on and this role's target is ready — we just need to match this candidate to their Predictive Index to show the fit."
+          : "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.",
       brand, pageNo));
     pageNo++;
-    out.push(isLive
-      ? P.livePiPage(b, "PI job-fit", brand, pageNo)
-      : P.lockedPiPage(b, "PI job-fit", brand, pageNo));
+    out.push(
+      isLive      ? P.livePiPage(b, "PI job-fit", brand, pageNo) :
+      needsMatch  ? P.needsMatchPiPage(b, "PI job-fit", brand, pageNo) :
+                    P.lockedPiPage(b, "PI job-fit", brand, pageNo)
+    );
   }
 
   // 6 · Skills check (leg 4). Owner-editable suggestions: a walk-through probe
