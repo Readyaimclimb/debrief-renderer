@@ -219,6 +219,58 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
   return E.lightPage(inner, brand, pageNo);
 }
 
+// ── PI job-fit page — NEEDS-MATCH (the fail-loud state) ─────────────────────
+// PI is ON for this client and the role's target is wired up, but we couldn't
+// match THIS candidate to their Predictive Index — almost always a missing
+// email on the applicant record. This is NOT the FOMO teaser (that's a sell to
+// a client without PI) and NOT a silent locked card (which would hide a fixable
+// gap behind "PI off"). It's a quiet, honest, light card that names the gap and
+// the one-step fix, so the owner sees they're one field from the feature they
+// already pay for. Amber (the universal "attention, fixable" semantic), never
+// the brand navy of the FOMO card — the two must never be confused at a glance.
+function needsMatchPiPage(block, eyebrowLabel, brand, pageNo) {
+  const amber = TOKEN_HEX.mixed;     // universal "worth attention", never themed
+  const m = block.match || {};
+  const who = block.candidateName || "this candidate";
+
+  const inner = `
+    <div style="break-inside:avoid;">
+      ${E.titleBlock(eyebrowLabel, block.name, { intro: (block.intro || ""), h2size: 30 })}
+      <div style="font-size:13px; line-height:1.5; color:var(--text-muted); margin:6px 0 18px;">
+        <strong style="color:var(--text-body);">Purpose:</strong> ${esc(block.purpose)}
+      </div>
+      <div style="background:var(--rac-white); border:1px solid var(--border-subtle);
+          border-left:4px solid ${amber}; border-radius:12px; padding:24px 26px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          <span style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+              color:${amber}; background:${E.TOKEN_BG.mixed}; padding:4px 11px; border-radius:20px;">
+            One field away
+          </span>
+        </div>
+        <div style="font-size:19px; font-weight:800; line-height:1.3; letter-spacing:-0.01em;
+            color:var(--text-strong); margin-bottom:12px; max-width:560px;">
+          ${esc(m.headline || ("We couldn't match " + who + " to their Predictive Index"))}
+        </div>
+        <p style="font-size:14px; line-height:1.6; color:var(--text-body); margin:0 0 18px; max-width:580px;">
+          ${esc(m.body || "")}
+        </p>
+        <div style="display:flex; gap:11px; background:var(--rac-off-white); border-radius:8px;
+            padding:14px 16px; margin-bottom:14px;">
+          <span style="flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:0.06em;
+              text-transform:uppercase; color:${amber}; padding-top:2px;">The fix</span>
+          <span style="font-size:13.5px; line-height:1.5; color:var(--text-body); font-weight:600;">
+            ${esc(m.fix || ("Add " + who + "'s email, then regenerate this guide."))}
+          </span>
+        </div>
+        <div style="font-size:12.5px; line-height:1.45; color:var(--text-muted); border-top:1px solid var(--border-subtle);
+            padding-top:13px;">
+          ${esc(m.roleLine || "This role's behavioral target is set and waiting.")}
+        </div>
+      </div>
+    </div>`;
+  return E.lightPage(inner, brand, pageNo);
+}
+
 // ── PI job-fit page — LIVE per-drive predictions (leg 3, PI + target + cand) ──
 // Renders the real align/stretch read from block.drives (built by the engine in
 // api/_lib/piLiveBlock.js). Stretches are gaps worth probing (a question + a
@@ -365,5 +417,5 @@ function ctaPage(ctx, brand, logoDark) {
 }
 
 module.exports = {
-  coverPage, howToPage, blockPage, skillsPage, lockedPiPage, livePiPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
+  coverPage, howToPage, blockPage, skillsPage, lockedPiPage, needsMatchPiPage, livePiPage, dividerPage, debriefPage, ctaPage, GUARDRAIL,
 };
