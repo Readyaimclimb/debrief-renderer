@@ -10,6 +10,7 @@
 //    GET  /health        → { status: "ok" }   (Render health check)
 //    POST /debrief-pdf   → application/pdf     (the real work)
 //    POST /roadmap-pdf   → application/pdf
+//    POST /definition-pdf → application/pdf
 //    POST /site-colors   → { colors: ["#..", ...] }   (brand colors from a URL)
 //
 //  Why this exists: headless Chromium on Vercel's serverless runtime is
@@ -21,6 +22,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const { buildDebriefHTML } = require("./assemble.js");
 const { buildRoadmapHTML } = require("./roadmap-engine.js");
+const { buildDefinitionHTML } = require("./definition-engine.js");
 const { buildJobAdHTML } = require("./jobad-engine.js");
 const { buildOneSheetHTML } = require("./assemble-onesheet.js");
 const { extractDominantColors } = require("./sampler.js");
@@ -173,7 +175,48 @@ app.post("/roadmap-pdf", async (req, res) => {
   }
 });
 
-// ── /jobad-pdf ─────────────────────────────────────────────────────────────
+// ── /definition-pdf ────────────────────────────────────────────────────────
+//  The branded Role Definition PDF. Same shape as the other endpoints: takes
+//  the role's resolved Definition object (the app's forwarder resolves the
+//  same fallbacks RolesHub.jsx uses — goalLine, great, legacyOwns — so the PDF
+//  mirrors the on-screen Definition), builds the HTML via the definition engine
+//  (which reuses debrief-engine.js for one shared styling system), renders with
+//  the same warm Chrome, streams the PDF back.
+app.post("/definition-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { definition, ctx, brand } = req.body || {};
+    if (!definition || !ctx || !brand) {
+      return res.status(400).json({ error: "definition, ctx, and brand are required" });
+    }
+    const logoDark = brand.logoDark || "";
+    const safeBrand = {
+      clientName: brand.clientName || ctx.company || "Client",
+      navy: brand.navy || "#171758",
+      navyDark: brand.navyDark || "#0A0A34",
+      accent: brand.accent || "#EA6B47",
+      blue: brand.blue || "#4F79C2",
+      date: brand.date || new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    };
+    const html = buildDefinitionHTML({ definition, ctx, brand: safeBrand, logoDark });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const fname = `${(ctx.role || "role").replace(/[^a-z0-9]+/gi, "_")}_Definition.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("definition-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
 //  The branded Job Ad PDF. Same shape as the other endpoints: takes the
 //  assembled jobad (from the app's buildJobAd()), builds the HTML via the job
 //  ad engine, renders with the same warm Chrome, streams the PDF back.
