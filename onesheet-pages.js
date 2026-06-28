@@ -180,6 +180,13 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
   const accent = brand.accent || "#EA6B47";
   const navy = brand.navy || "#171758";
   const cap = block.capability || {};
+  // De-jargon: when the block isn't for a PI client (block.pi === false), the
+  // chrome strings below ("PI only", "What PI adds") go generic. The block's own
+  // copy (name, roleLine, honest, cta) is already assessment-aware from the API.
+  const isPi = block.pi !== false; // default true if flag absent (back-compat)
+  const lockLabel = isPi ? "🔒 PI only" : "🔒 Add-on";
+  const addsLabel = isPi ? "What PI adds to this role" : "What a fit assessment adds to this role";
+  const ctaFallback = isPi ? "See how PI fits this role" : "See how a fit assessment fits this role";
   const bullets = (cap.bullets || []).map((b) => `
     <div style="display:flex; gap:10px; margin-bottom:10px; font-size:13.5px; line-height:1.5; color:rgba(255,255,255,0.9);">
       <span style="flex:0 0 auto; color:${accent}; font-weight:900;">+</span>
@@ -195,9 +202,9 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
       <div style="position:relative; background:linear-gradient(160deg, ${navy} 0%, ${brand.navyDark || "#0A0A34"} 100%);
           border-radius:12px; padding:28px 30px; color:#fff; overflow:hidden;">
         <div style="position:absolute; top:18px; right:22px; font-size:11px; font-weight:700; letter-spacing:0.1em;
-            text-transform:uppercase; color:rgba(255,255,255,0.55);">🔒 PI only</div>
+            text-transform:uppercase; color:rgba(255,255,255,0.55);">${lockLabel}</div>
         <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${accent}; margin-bottom:10px;">
-          What PI adds to this role
+          ${addsLabel}
         </div>
         <div style="font-size:20px; font-weight:800; line-height:1.25; letter-spacing:-0.01em; margin-bottom:14px; max-width:560px;">
           ${esc(cap.headline || "")}
@@ -212,7 +219,7 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
             ${esc(cap.honest || "")}
           </span>
           <span style="flex:0 0 auto; background:${accent}; color:#fff; font-weight:700; font-size:13px;
-              padding:11px 20px; border-radius:6px;">${esc(cap.cta || "See how PI fits this role")}&nbsp;→</span>
+              padding:11px 20px; border-radius:6px;">${esc(cap.cta || ctaFallback)}&nbsp;→</span>
         </div>
       </div>
     </div>`;
