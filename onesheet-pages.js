@@ -184,6 +184,9 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
   // chrome strings below ("PI only", "What PI adds") go generic. The block's own
   // copy (name, roleLine, honest, cta) is already assessment-aware from the API.
   const isPi = block.pi !== false; // default true if flag absent (back-compat)
+  // De-jargon the page eyebrow too — the assembler passes "PI JOB-FIT", which
+  // leaks PI on a non-PI page. For a non-PI client, show a generic eyebrow.
+  const eyebrow = isPi ? eyebrowLabel : "BEHAVIORAL FIT";
   const lockLabel = isPi ? "🔒 PI only" : "🔒 Add-on";
   const addsLabel = isPi ? "What PI adds to this role" : "What a fit assessment adds to this role";
   const ctaFallback = isPi ? "See how PI fits this role" : "See how a fit assessment fits this role";
@@ -195,7 +198,7 @@ function lockedPiPage(block, eyebrowLabel, brand, pageNo) {
 
   const inner = `
     <div style="break-inside:avoid;">
-      ${E.titleBlock(eyebrowLabel, block.name, { intro: (block.intro || ""), h2size: 30 })}
+      ${E.titleBlock(eyebrow, block.name, { intro: (block.intro || ""), h2size: 30 })}
       <div style="font-size:13px; line-height:1.5; color:var(--text-muted); margin:6px 0 18px;">
         <strong style="color:var(--text-body);">Purpose:</strong> ${esc(block.purpose)}
       </div>
