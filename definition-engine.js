@@ -136,18 +136,18 @@ function fullCard(heading, bodyHTML, contentHeight, accent = ACCENT) {
   return { html, height };
 }
 
-// The 3 Obsessions, each its own navy-accent card with a name + behavior bullets.
-// Returns an ARRAY of blocks (one per obsession) so they paginate independently.
-function obsessionBlocks(obsessions) {
+// The Obsessions — ONE section; each obsession is its own item-card so the
+// section can split between cards ONLY if it's taller than a full page.
+function obsessionsSection(obsessions) {
   const list = (obsessions || []).filter(o => o && (o.name || (o.behaviors || []).length));
-  if (!list.length) return [];
-  return list.map((o, idx) => {
+  if (!list.length) return null;
+  const items = list.map((o, idx) => {
     const behaviors = (o.behaviors || []).filter(Boolean);
     const bulletLines = behaviors.reduce((n, b) => n + estLines(b, 70), 0);
     const body = behaviors.length
       ? `<ul style="margin:0; padding-left:20px; font-size:13.5px; line-height:1.7; color:var(--text-body);">${behaviors.map(b => `<li style="margin-bottom:5px;">${esc(b)}</li>`).join("")}</ul>`
       : `<div style="font-size:13.5px; color:var(--text-faint);">—</div>`;
-    const height = 40 + 12 + bulletLines * 23 + 28;
+    const height = 28 + 10 + bulletLines * 23 + 28;
     const html = `
       <div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:18px 22px;">
         <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:10px;">Obsession ${idx + 1} · ${esc(o.name || "")}</div>
@@ -155,81 +155,62 @@ function obsessionBlocks(obsessions) {
       </div>`;
     return { html, height };
   });
+  return groupSection("The 3 Obsessions", items, NAVY);
 }
 
-// Win-the-Week scorecard: each KPI its own card (metric · target pill · definition).
-function winTheWeekBlock(kpis) {
+// Win-the-Week scorecard: ONE section; each KPI its own item-card.
+function winTheWeekSection(kpis) {
   const list = (kpis || []).filter(k => k && (k.metric || k.definition || k.target));
   if (!list.length) return null;
-  const card = (k) => {
+  const items = list.map((k) => {
     const targetPill = k.target ? `<span style="display:inline-block; background:rgba(47,125,84,0.12); border:1px solid rgba(47,125,84,0.28); border-radius:999px; padding:3px 11px; font-size:11.5px; font-weight:700; color:#2F7D54; margin-left:10px;">${esc(k.target)}</span>` : "";
-    return `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:14px 18px; margin-bottom:10px;">
+    const html = `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:14px 18px;">
       <div style="display:flex; align-items:center; margin-bottom:${k.definition ? "6px" : "0"};"><span style="font-size:14.5px; font-weight:700; color:var(--text-strong);">${esc(k.metric || "")}</span>${targetPill}</div>
       ${k.definition ? `<div style="font-size:13px; line-height:1.55; color:var(--text-body);">${esc(k.definition)}</div>` : ""}
     </div>`;
-  };
-  // header(~40) + each card: metric row(~30) + def lines(@22) + padding/margin(~38)
-  let inner = 0;
-  for (const k of list) inner += 30 + estLines(k.definition, 66) * 22 + 38;
-  const height = 40 + 12 + inner;
-  const html = `
-    <div>
-      <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${ACCENT}; margin-bottom:12px;">Win the Week — Scorecard</div>
-      ${list.map(card).join("")}
-    </div>`;
-  return { html, height };
+    const height = 30 + estLines(k.definition, 66) * 22 + 28;
+    return { html, height };
+  });
+  return groupSection("Win the Week — Scorecard", items, ACCENT);
 }
 
-// What Great Looks Like: each statement its OWN card (visual uniformity w/ scorecard).
-function whatGreatBlock(items) {
+// What Great Looks Like: ONE section; each statement its own item-card.
+function whatGreatSection(items) {
   const list = (items || []).filter(Boolean);
   if (!list.length) return null;
-  const card = (txt) => `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:14px 18px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start;">
-    <span style="flex:0 0 auto; color:#2F7D54; font-weight:900; font-size:15px; line-height:1.5;">✓</span>
-    <span style="font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(txt)}</span>
-  </div>`;
-  let inner = 0;
-  for (const t of list) inner += estLines(t, 64) * 22 + 38;
-  const height = 40 + 12 + inner;
-  const html = `
-    <div>
-      <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:12px;">What Great Looks Like</div>
-      ${list.map(card).join("")}
+  const built = list.map((txt) => {
+    const html = `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:14px 18px; display:flex; gap:12px; align-items:flex-start;">
+      <span style="flex:0 0 auto; color:#2F7D54; font-weight:900; font-size:15px; line-height:1.5;">✓</span>
+      <span style="font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(txt)}</span>
     </div>`;
-  return { html, height };
+    const height = estLines(txt, 64) * 22 + 28;
+    return { html, height };
+  });
+  return groupSection("What Great Looks Like", built, NAVY);
 }
 
-// Playbooks: name + Owned/Executed tag + owned-only improve-loop caption + notes.
-function playbooksBlock(playbooks) {
+// Playbooks: ONE section; each play its own item-card.
+function playbooksSection(playbooks) {
   const list = (playbooks || []).filter(p => p && p.name);
   if (!list.length) return null;
-  const row = (p) => {
+  const built = list.map((p) => {
     const owned = String(p.mode || "").toLowerCase() === "own";
     const tag = owned
       ? `<span style="display:inline-block; background:rgba(47,125,84,0.12); border:1px solid rgba(47,125,84,0.28); border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; letter-spacing:0.04em; color:#2F7D54;">OWNED</span>`
       : `<span style="display:inline-block; background:rgba(79,121,194,0.12); border:1px solid rgba(79,121,194,0.30); border-radius:999px; padding:3px 11px; font-size:11px; font-weight:700; letter-spacing:0.04em; color:#3A5F9E;">EXECUTED</span>`;
     const caption = owned ? `<div style="font-size:12px; line-height:1.5; color:var(--text-muted); margin-top:7px;">Owns the improve loop — observe → audit → improve → update → train.</div>` : "";
     const notes = p.notes ? `<div style="font-size:12.5px; line-height:1.55; color:var(--text-body); margin-top:6px;">${esc(p.notes)}</div>` : "";
-    return `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:14px 18px; margin-bottom:10px;">
+    const html = `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${ACCENT}; box-shadow:var(--shadow-card); padding:14px 18px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;"><span style="font-size:14.5px; font-weight:700; color:var(--text-strong);">${esc(p.name)}</span>${tag}</div>
       ${caption}${notes}
     </div>`;
-  };
-  let inner = 0;
-  for (const p of list) {
-    const owned = String(p.mode || "").toLowerCase() === "own";
-    inner += 30 + (owned ? 24 : 0) + (p.notes ? estLines(p.notes, 64) * 20 + 6 : 0) + 38;
-  }
-  const height = 40 + 12 + inner;
-  const html = `
-    <div>
-      <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${ACCENT}; margin-bottom:12px;">Playbooks &amp; Processes</div>
-      ${list.map(row).join("")}
-    </div>`;
-  return { html, height };
+    const height = 30 + (owned ? 24 : 0) + (p.notes ? estLines(p.notes, 64) * 20 + 6 : 0) + 28;
+    return { html, height };
+  });
+  return groupSection("Playbooks &amp; Processes", built, ACCENT);
 }
 
-// Scope & Structure: reports-to + cross-functional partners.
+// Scope & Structure: reports-to + cross-functional partners (single self-contained card).
 function scopeBlock(reportsTo, crossFunctional) {
   const cross = (crossFunctional || []).filter(Boolean);
   if (!reportsTo && !cross.length) return null;
@@ -244,51 +225,84 @@ function scopeBlock(reportsTo, crossFunctional) {
   return fullCard("Scope &amp; Structure", body, lines * 22 + 24, NAVY);
 }
 
-// Legacy "What this seat owns" — old roles with only flat outcomes (no KPIs).
-// The forwarder resolves this exactly as RolesHub.jsx does and passes it in.
-function legacyOwnsBlock(items) {
+// Legacy "What this seat owns" — ONE section; each outcome its own item-card.
+function legacyOwnsSection(items) {
   const list = (items || []).filter(Boolean);
   if (!list.length) return null;
-  const card = (txt) => `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:14px 18px; margin-bottom:10px; display:flex; gap:12px; align-items:flex-start;">
-    <span style="flex:0 0 auto; color:#2F7D54; font-weight:900; font-size:15px; line-height:1.5;">✓</span>
-    <span style="font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(txt)}</span>
-  </div>`;
-  let inner = 0;
-  for (const t of list) inner += estLines(t, 64) * 22 + 38;
-  const height = 40 + 12 + inner;
-  const html = `
-    <div>
-      <div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${NAVY}; margin-bottom:12px;">What This Seat Owns</div>
-      ${list.map(card).join("")}
+  const built = list.map((txt) => {
+    const html = `<div style="background:#fff; border:1px solid var(--border-subtle); border-left:4px solid ${NAVY}; box-shadow:var(--shadow-card); padding:14px 18px; display:flex; gap:12px; align-items:flex-start;">
+      <span style="flex:0 0 auto; color:#2F7D54; font-weight:900; font-size:15px; line-height:1.5;">✓</span>
+      <span style="font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(txt)}</span>
     </div>`;
-  return { html, height };
+    const height = estLines(txt, 64) * 22 + 28;
+    return { html, height };
+  });
+  return groupSection("What This Seat Owns", built, NAVY);
 }
 
-// build the full ordered list of blocks for the definition
-function definitionBlocks(def) {
+// ════════════════════════════════════════════════════════════════════════
+//  SECTION MODEL — the unit of pagination is a SECTION, never a single card.
+//  A section = { label, items:[{html,height}], headerH, height }. The paginator
+//  keeps a section WHOLE on one page; if it can't fit in the room left, the whole
+//  section moves to the next page (two whole sections may share a page when they
+//  both fit). A section only ever splits if it is physically taller than a full
+//  page — and then it breaks BETWEEN items, carrying a "(cont.)" section header.
+// ════════════════════════════════════════════════════════════════════════
+const SECTION_HEADER_H = 30;   // the small uppercase section label + its gap
+const ITEM_GAP = 10;           // vertical gap between cards within a section
+
+// Wrap a built {html,height} block as a single-item section with no inner header
+// (used for the navy purpose hero and scope — they're self-contained cards).
+function soloSection(block) {
+  if (!block) return null;
+  return { label: null, items: [block], headerH: 0, height: block.height };
+}
+
+// A multi-item section: an uppercase label + N item-cards. Height = header + items.
+function groupSection(label, items, accent) {
+  const list = (items || []).filter(Boolean);
+  if (!list.length) return null;
+  const itemsH = list.reduce((n, it, idx) => n + it.height + (idx > 0 ? ITEM_GAP : 0), 0);
+  return { label, labelAccent: accent || ACCENT, items: list, headerH: SECTION_HEADER_H, height: SECTION_HEADER_H + itemsH };
+}
+
+// Render a section (or a continued slice of one) to HTML.
+function renderSection(sec, sliceItems, cont) {
+  const labelHTML = sec.label
+    ? `<div style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${sec.labelAccent}; margin-bottom:12px;">${sec.label}${cont ? ' <span style="color:var(--text-faint);">(cont.)</span>' : ""}</div>`
+    : "";
+  const itemsHTML = sliceItems.map((it, idx) =>
+    (idx > 0 ? `<div style="height:${ITEM_GAP}px"></div>` : "") + it.html
+  ).join("");
+  return `<div>${labelHTML}${itemsHTML}</div>`;
+}
+
+// build the ordered list of SECTIONS for the definition
+function definitionSections(def) {
   const v = def || {};
   return [
-    purposeHero(v.rolePurpose, v.primaryGoal),
-    ...obsessionBlocks(v.obsessionsFull),
-    winTheWeekBlock(v.winTheWeekKpis),
-    whatGreatBlock(v.whatGreatLooksLike),
-    playbooksBlock(v.playbooks),
-    scopeBlock(v.reportsTo, v.crossFunctional),
-    legacyOwnsBlock(v.legacyOwns),
+    soloSection(purposeHero(v.rolePurpose, v.primaryGoal)),
+    obsessionsSection(v.obsessionsFull),
+    winTheWeekSection(v.winTheWeekKpis),
+    whatGreatSection(v.whatGreatLooksLike),
+    playbooksSection(v.playbooks),
+    soloSection(scopeBlock(v.reportsTo, v.crossFunctional)),
+    legacyOwnsSection(v.legacyOwns),
   ].filter(Boolean);
 }
 
 // ════════════════════════════════════════════════════════════════════════
-//  PAGINATOR — packs the definition blocks onto pages, breaking before overflow.
-//  One running "section" titled "The Role, Defined"; continues with "(cont.)".
+//  PAGINATOR — packs whole SECTIONS onto pages. A section stays intact unless it
+//  is taller than a full page, in which case it splits between items with a
+//  "(cont.)" header. Multiple whole sections share a page when they both fit.
 // ════════════════════════════════════════════════════════════════════════
 function paginate(def, ctx, brand, startPage) {
-  const blocks = definitionBlocks(def);
+  const sections = definitionSections(def);
   const pages = [];
-  let i = 0, pageIdx = 0;
+  let pageIdx = 0;
 
-  // Defensive: if somehow nothing was captured, still emit one honest page.
-  if (!blocks.length) {
+  // Defensive: nothing captured → one honest page.
+  if (!sections.length) {
     const title = titleBlock("The Seat, Defined", "The Role, Defined", {
       cont: false, intro: esc("This role's definition is still being built."), h2size: 40,
     });
@@ -298,27 +312,66 @@ function paginate(def, ctx, brand, startPage) {
 
   const intro = `The full definition of the ${esc(ctx.role || "role")} — its purpose, the behaviors that matter, how it's scored week to week, and what great looks like.`;
 
-  while (i < blocks.length) {
+  // Open a fresh page; returns its running budget + collected body.
+  function newPageState() {
     const cont = pageIdx > 0;
     const titleH = cont ? TITLE_CONT_H : TITLE_H;
-    let budget = USABLE - titleH;
-    let body = "";
-    let placed = 0;
-
-    while (i < blocks.length) {
-      const h = blocks[i].height + (placed > 0 ? BLOCK_GAP : 0);
-      if (placed > 0 && budget - h < 0) break;   // would overflow → new page
-      body += (placed > 0 ? `<div style="height:${BLOCK_GAP}px"></div>` : "") + blocks[i].html;
-      budget -= h;
-      i++; placed++;
-    }
-
+    return { cont, budget: USABLE - titleH, body: "", placed: 0 };
+  }
+  function flush(st) {
     const title = titleBlock("The Seat, Defined", "The Role, Defined", {
-      cont, intro: cont ? undefined : intro, h2size: 40,
+      cont: st.cont, intro: st.cont ? undefined : intro, h2size: 40,
     });
-    pages.push(defLightPage(title + body, brand, startPage + pageIdx));
+    pages.push(defLightPage(title + st.body, brand, startPage + pageIdx));
     pageIdx++;
   }
+
+  let st = newPageState();
+
+  for (const sec of sections) {
+    const need = sec.height + (st.placed > 0 ? BLOCK_GAP : 0);
+
+    // Case A — the whole section fits in the room left on this page: place it.
+    if (need <= st.budget) {
+      st.body += (st.placed > 0 ? `<div style="height:${BLOCK_GAP}px"></div>` : "") + renderSection(sec, sec.items, false);
+      st.budget -= need;
+      st.placed++;
+      continue;
+    }
+
+    // Case B — it doesn't fit here. Does it fit on a FRESH page as a whole? If so,
+    // move the entire section to a new page (this is the core "no split" rule).
+    const freshBudget = USABLE - TITLE_CONT_H;
+    if (sec.height <= freshBudget) {
+      if (st.placed > 0) { flush(st); st = newPageState(); }
+      st.body += renderSection(sec, sec.items, false);
+      st.budget -= sec.height;
+      st.placed++;
+      continue;
+    }
+
+    // Case C — the section is taller than a full page: it MUST split. Break only
+    // between items, carrying the section header with "(cont.)" on each page.
+    if (st.placed > 0) { flush(st); st = newPageState(); }
+    let idx = 0, first = true;
+    while (idx < sec.items.length) {
+      let pageBudget = USABLE - (st.cont ? TITLE_CONT_H : TITLE_H) - sec.headerH;
+      const slice = [];
+      while (idx < sec.items.length) {
+        const itH = sec.items[idx].height + (slice.length > 0 ? ITEM_GAP : 0);
+        if (slice.length > 0 && itH > pageBudget) break; // at least one item per page
+        slice.push(sec.items[idx]);
+        pageBudget -= itH;
+        idx++;
+      }
+      st.body += renderSection(sec, slice, !first);
+      st.placed++;
+      first = false;
+      if (idx < sec.items.length) { flush(st); st = newPageState(); }
+    }
+  }
+
+  if (st.placed > 0 || pages.length === 0) flush(st);
   return { html: pages.join("\n"), pageCount: pageIdx };
 }
 
