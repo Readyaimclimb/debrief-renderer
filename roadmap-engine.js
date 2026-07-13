@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — 30/60/90 Roadmap PDF engine (PAGINATED)
+//  TRUESEAT — 30/60/90 Roadmap PDF engine (PAGINATED)
 //  Matches the debrief design standard: debrief cover treatment (rings, glow,
 //  74px logo, meta row), bordered accent-bar cards, navy milestone block.
 //  Like the debrief, it PAGINATES: each phase's blocks are measured and packed
@@ -60,7 +60,7 @@ function coverPage(brand, ctx, logoDark) {
       <span style="font-size:12px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--cd-accent);">Onboarding Roadmap</span>
       <h1 style="margin:16px 0 0; font-weight:900; font-size:72px; line-height:0.96; letter-spacing:-0.03em;">The First<br>90 Days</h1>
       <div style="width:72px; height:4px; background:var(--cd-accent); margin:26px 0 22px;"></div>
-      <p style="margin:0; max-width:560px; font-size:18px; line-height:1.5; color:rgba(255,255,255,0.82);">A milestone-driven ramp for the <b style="color:#fff; font-weight:700;">${esc(ctx.role || "new hire")}</b> — from learning the business to fully owning the role, built to the Ready Aim Climb standard.</p>
+      <p style="margin:0; max-width:560px; font-size:18px; line-height:1.5; color:rgba(255,255,255,0.82);">A milestone-driven ramp for the <b style="color:#fff; font-weight:700;">${esc(ctx.role || "new hire")}</b> — from learning the business to fully owning the role, built to the Trueseat standard.</p>
       <div style="flex:1;"></div>
       <div style="display:flex; border-top:1px solid rgba(255,255,255,0.16); padding-top:22px;">
         ${meta("Role", ctx.role || "New Hire", 1.2, "0 24px 0 0")}
@@ -69,7 +69,7 @@ function coverPage(brand, ctx, logoDark) {
         <div style="width:1px; background:rgba(255,255,255,0.16);"></div>
         ${meta("Date", brand.date, 1, "0 0 0 24px")}
       </div>
-      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Ready Aim Climb · Hire2Scale</div>
+      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Trueseat</div>
     </div>
   </section>`;
 }

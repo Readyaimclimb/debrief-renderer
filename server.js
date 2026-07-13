@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  Hire2Scale — Debrief PDF Rendering Service
+//  Trueseat — Debrief PDF Rendering Service
 //
 //  A standalone rendering service that runs REAL Chrome (installed in the
 //  Docker container) to turn debrief data into a branded PDF. Deployed on
@@ -118,7 +118,7 @@ app.post("/onesheet-pdf", async (req, res) => {
       navy: brand.navy || "#171758",
       navyDark: brand.navyDark || "#0A0A34",
       accent: brand.accent || "#EA6B47",
-      contact: brand.contact || "Powered by Ready Aim Climb · readyaimclimb.com",
+      contact: brand.contact || "Powered by Trueseat",
     };
     const html = buildOneSheetHTML({ prep_blocks, ctx, brand: safeBrand, logoDark });
     const browser = await getBrowser();

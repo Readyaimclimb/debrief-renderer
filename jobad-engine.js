@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — Job Ad PDF engine (PAGINATED)
+//  TRUESEAT — Job Ad PDF engine (PAGINATED)
 //  Renders the "Perfect Job Ad" framework as a branded PDF in the suite's
 //  design standard: debrief/roadmap cover treatment (rings, glow, wordmark
 //  fallback, meta strip), cream interior pages with accent-bar cards, a navy
@@ -74,7 +74,7 @@ function coverPage(ctx, brand, logoDark) {
         ${ctx.type && ctx.payRange ? `<div style="width:1px; background:rgba(255,255,255,0.16);"></div>` : ""}
         ${meta("Pay", ctx.payRange, 1, "0 0 0 24px")}
       </div>` : ""}
-      <div style="margin-top:22px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Ready Aim Climb · Hire2Scale</div>
+      <div style="margin-top:22px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Trueseat</div>
     </div>
   </section>`;
 }
@@ -272,7 +272,7 @@ function ctaPage(ctx, brand, logoDark) {
       <h2 style="margin:14px 0 0; font-weight:900; font-size:44px; line-height:1.05; letter-spacing:-0.02em;">${esc(ctaLine)}</h2>
       ${apply}
       <div style="position:absolute; left:64px; right:64px; bottom:40px; border-top:1px solid rgba(255,255,255,0.15); padding-top:14px; font-size:11px; color:rgba(255,255,255,0.5);">
-        ${esc(brand.clientName)} · Powered by Ready Aim Climb · Hire2Scale
+        ${esc(brand.clientName)} · Powered by Trueseat
       </div>
     </div>
   </section>`;

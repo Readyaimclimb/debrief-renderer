@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — Role Definition PDF engine (PAGINATED)
+//  TRUESEAT — Role Definition PDF engine (PAGINATED)
 //  Renders the full role Definition (the on-screen RolesHub Definition view)
 //  to a branded PDF at the locked 30/60/90 / debrief design standard:
 //  debrief cover treatment (rings, glow, 74px logo, meta row), a navy purpose
@@ -71,7 +71,7 @@ function coverPage(brand, ctx, logoDark) {
       <span style="font-size:12px; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:var(--cd-accent);">Role Definition</span>
       <h1 style="margin:16px 0 0; font-weight:900; font-size:64px; line-height:0.98; letter-spacing:-0.03em;">${esc(ctx.role || "The Role")}</h1>
       <div style="width:72px; height:4px; background:var(--cd-accent); margin:26px 0 22px;"></div>
-      <p style="margin:0; max-width:560px; font-size:18px; line-height:1.5; color:rgba(255,255,255,0.82);">What this seat is for, what great looks like, and how it wins — defined to the <b style="color:#fff; font-weight:700;">Ready Aim Climb</b> standard so the role is clear before anyone fills it.</p>
+      <p style="margin:0; max-width:560px; font-size:18px; line-height:1.5; color:rgba(255,255,255,0.82);">What this seat is for, what great looks like, and how it wins — defined to the <b style="color:#fff; font-weight:700;">Trueseat</b> standard so the role is clear before anyone fills it.</p>
       <div style="flex:1;"></div>
       <div style="display:flex; border-top:1px solid rgba(255,255,255,0.16); padding-top:22px;">
         ${meta("Role", ctx.role || "The Role", 1.2, "0 24px 0 0")}
@@ -80,7 +80,7 @@ function coverPage(brand, ctx, logoDark) {
         <div style="width:1px; background:rgba(255,255,255,0.16);"></div>
         ${meta("Date", brand.date, 1, "0 0 0 24px")}
       </div>
-      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Ready Aim Climb · Hire2Scale</div>
+      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Trueseat</div>
     </div>
   </section>`;
 }

@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — One Sheet document assembler
+//  TRUESEAT — One Sheet document assembler
 //  Mirrors assemble.js: thread a running pageNo through the page sequence,
 //  wrap the pages in the self-contained HTML document shell (DS_TOKENS +
 //  --cd-accent + print CSS), return one HTML string for Chrome.

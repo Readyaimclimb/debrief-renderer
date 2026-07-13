@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — One Sheet PDF page builders
+//  TRUESEAT — One Sheet PDF page builders
 //
 //  Sibling to the debrief renderer: reuses debrief-engine.js for brand tokens,
 //  the cream lightPage shell, titleBlock header, footer, and functional status
@@ -53,7 +53,7 @@ function coverPage(ctx, brand, logoDark) {
         </p>
       </div>
       <div style="text-align:center; font-size:12px; color:rgba(255,255,255,0.5);">
-        ${esc(brand.contact || "Powered by Ready Aim Climb · readyaimclimb.com")}
+        ${esc(brand.contact || "Powered by Trueseat")}
       </div>
     </div>`, brand);
 }
@@ -421,7 +421,7 @@ function ctaPage(ctx, brand, logoDark) {
       </div>
       <div style="position:absolute; left:64px; right:64px; bottom:40px; border-top:1px solid rgba(255,255,255,0.15);
           padding-top:14px; font-size:11px; color:rgba(255,255,255,0.5);">
-        ${esc(brand.contact || "Powered by Ready Aim Climb · readyaimclimb.com")}
+        ${esc(brand.contact || "Powered by Trueseat")}
       </div>
     </div>`, brand);
 }

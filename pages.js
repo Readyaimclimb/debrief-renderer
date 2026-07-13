@@ -48,7 +48,7 @@ function coverPage(report, ctx, brand, logoDark) {
         <div style="width:1px; background:rgba(255,255,255,0.16);"></div>
         ${coverMeta("Date", brand.date, 1, "0 0 0 24px")}
       </div>
-      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Ready Aim Climb · Hire2Scale</div>
+      <div style="margin-top:26px; font-size:11px; letter-spacing:0.04em; color:rgba(255,255,255,0.5);">Powered by Trueseat</div>
     </div>
   </section>`;
 }
@@ -245,7 +245,7 @@ function closingPage(report, ctx, brand, logoDark, pageNo) {
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.16); padding-top:16px; margin-top:22px;">
         <span style="font-size:12px; line-height:1.5; color:rgba(255,255,255,0.7);">${esc(brand.clientName)} · Candidate Debrief · Generated ${esc(brand.date)}</span>
-        <span style="font-size:11px; line-height:1.5; color:rgba(255,255,255,0.5);">Powered by Ready Aim Climb · Hire2Scale</span>
+        <span style="font-size:11px; line-height:1.5; color:rgba(255,255,255,0.5);">Powered by Trueseat</span>
       </div>
     </div>
   </section>`;

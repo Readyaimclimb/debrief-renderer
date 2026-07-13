@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-//  HIRE2SCALE — Candidate Debrief PDF engine
+//  TRUESEAT — Candidate Debrief PDF engine
 //  Renders the locked design standard (DEBRIEF_STANDARD.md) from live data.
 //  Input:  report (app's synthesis object) + ctx (candidate/role/panel) + brand
 //  Output: self-contained HTML string -> Playwright -> PDF
