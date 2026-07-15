@@ -25,6 +25,7 @@ const { buildRoadmapHTML } = require("./roadmap-engine.js");
 const { buildDefinitionHTML } = require("./definition-engine.js");
 const { buildJobAdHTML } = require("./jobad-engine.js");
 const { buildOneSheetHTML } = require("./assemble-onesheet.js");
+const { buildPlaybookHTML } = require("./assemble-playbook.js"); // PROOF: one-page Arimo font test — remove with its route after verifying
 const { extractDominantColors } = require("./sampler.js");
 
 const app = express();
@@ -253,6 +254,36 @@ app.post("/jobad-pdf", async (req, res) => {
   } catch (err) {
     console.error("jobad-pdf error:", err);
     res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /playbook-proof ─────────────────────────────────────────────────────────
+//  TEMPORARY one-page proof. Renders page 6 of the Hiring Playbook ("No
+//  Scorecard. No Search.") to confirm the embedded Arimo webfont + table +
+//  navy callout render correctly in this service's headless Chrome before the
+//  full Playbook/Culture decks are built. GET so it opens directly in a browser.
+//  No auth on purpose (throwaway). DELETE this route + its require +
+//  assemble-playbook.js/playbook-pages.js are kept for the full build; this
+//  route is the only throwaway. Remove after the diff passes.
+app.get("/playbook-proof", async (req, res) => {
+  try {
+    const html = buildPlaybookHTML({
+      ctx: { company: "Summit Mechanical" },
+      brand: { clientName: "Summit Mechanical", navy: "#16242E", blue: "#1F6FB2" },
+    });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="playbook-proof.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("playbook-proof error:", err);
+    res.status(500).json({ error: "proof failed", detail: String(err && err.message || err) });
   }
 });
 
