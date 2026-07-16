@@ -693,15 +693,32 @@ function leadInBullets({ brand, items }) {
 
 // ── navy inset callout (ref pg 04 "We hire slow and hold the line") ──
 //  Blue right-edge accent (offset shadow), blue eyebrow, white headline, body.
-function navyCallout({ brand, eyebrow, headline, body }) {
+function navyCallout({ brand, eyebrow, headline, body, bullets, closer }) {
   const blue = brand.blue || "#1F6FB2";
   const ink = pageInk(brand).solid;   // AUDIT #2: callout fill = near-black, not #171758
+  const bulletList = Array.isArray(bullets) ? bullets.filter(Boolean) : [];
+  // AUDIT #8: WOW-style callout = bulleted questions + a standalone BOLD closer,
+  // not one run-on paragraph. When bullets[] is passed, render them; otherwise
+  // fall back to the plain `body` paragraph (unchanged for the P4 philosophy box).
+  const bulletsHtml = bulletList.length
+    ? `<div style="margin:${headline ? 4 : 0}px 0 0;">${bulletList.map((t) =>
+        `<div style="display:flex; align-items:flex-start; margin:0 0 10px;">
+          <span style="display:inline-block; width:6px; height:6px; background:${blue}; margin:8px 12px 0 0; flex:0 0 auto;"></span>
+          <span style="font-size:14.5px; line-height:1.5; color:rgba(255,255,255,0.82);">${esc(t)}</span>
+        </div>`).join("")}</div>`
+    : "";
+  const closerHtml = closer
+    ? `<div style="margin-top:${bulletList.length ? 14 : 4}px; font-size:15px; font-weight:700; line-height:1.4; color:#FFFFFF;">${esc(closer)}</div>`
+    : "";
+  const bodyHtml = (!bulletList.length && body)
+    ? `<div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.72);">${esc(body)}</div>`
+    : "";
   return `<div style="position:relative; margin:0 0 30px;">
     <div style="position:absolute; top:8px; left:8px; right:-8px; bottom:-8px; background:${blue}; border-radius:2px;"></div>
     <div style="position:relative; background:${ink}; border-radius:2px; padding:26px 30px;">
       ${eyebrow ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${blue}; margin-bottom:10px;">${esc(eyebrow)}</div>` : ""}
-      ${headline ? `<div style="font-size:21px; font-weight:700; line-height:1.25; color:#FFFFFF; margin-bottom:${body ? 12 : 0}px;">${esc(headline)}</div>` : ""}
-      ${body ? `<div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.72);">${esc(body)}</div>` : ""}
+      ${headline ? `<div style="font-size:21px; font-weight:700; line-height:1.25; color:#FFFFFF; margin-bottom:${(body || bulletList.length || closer) ? 12 : 0}px;">${esc(headline)}</div>` : ""}
+      ${bulletsHtml}${closerHtml}${bodyHtml}
     </div>
   </div>`;
 }

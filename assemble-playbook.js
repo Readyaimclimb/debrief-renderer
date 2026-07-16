@@ -42,12 +42,50 @@ const P = require("./playbook-pages.js");
 
 const DOC = "Hiring & Talent Development Playbook";
 
+// numberWord — spell a small count as a word for body prose ("three values"),
+// matching the reference. Falls back to the numeral above 12. Used where the
+// value count appears in a sentence (the P16 scoring rule).
+function numberWord(n) {
+  const W = ["zero", "one", "two", "three", "four", "five", "six", "seven",
+             "eight", "nine", "ten", "eleven", "twelve"];
+  return (n >= 0 && n <= 12) ? W[n] : String(n);
+}
+
 function buildPlaybookHTML({ ctx, brand, values }) {
   const b = {
     clientName: (brand && brand.clientName) || (ctx && ctx.company) || "Summit Mechanical",
     navy: (brand && brand.navy) || "#16242E",
     blue: (brand && brand.blue) || "#1F6FB2",
   };
+  // shortName — the CONVERSATIONAL name used in body prose ("Summit's own core
+  // values", "all Summit core values"), matching how the reference deck reads.
+  // The reference keeps the client's SHORT name literal in prose; the code was
+  // either dropping the name entirely (P2/P13) or interpolating the FULL legal
+  // name (P15/P21: "Summit Mechanical's own core values"). Both are the same
+  // class of copy-drift bug. This derives the short name generically so Summit
+  // renders "Summit", Contractor Dynamics renders "Contractor Dynamics", etc. —
+  // white-label-safe, never hard-coded to one tenant. Rule: drop a trailing
+  // generic business word (Mechanical, HVAC, Inc, LLC, Co, Company, Group,
+  // Services, Heating, Cooling, Plumbing, Electric, Contractors) so a two-token
+  // "First Generic" name collapses to "First"; multi-word or non-generic names
+  // are left whole (e.g. "Contractor Dynamics" stays "Contractor Dynamics").
+  const shortName = (() => {
+    const full = String(b.clientName || "").trim();
+    if (!full) return "";
+    const parts = full.split(/\s+/);
+    if (parts.length < 2) return full;
+    const GENERIC = new Set([
+      "mechanical", "hvac", "inc", "inc.", "llc", "l.l.c.", "co", "co.",
+      "company", "corp", "corp.", "group", "services", "service", "heating",
+      "cooling", "controls", "plumbing", "electric", "electrical", "contractors",
+      "contracting", "solutions", "systems", "industries", "enterprises",
+    ]);
+    const last = parts[parts.length - 1].toLowerCase().replace(/[.,]/g, "");
+    // only trim when the name is EXACTLY two tokens and the 2nd is generic —
+    // avoids over-trimming a real multi-word brand ("Contractor Dynamics").
+    if (parts.length === 2 && GENERIC.has(last)) return parts[0];
+    return full;
+  })();
   const tagline = (brand && brand.tagline) || "Heating · Cooling · Controls";
   const url = (brand && brand.url) || "www.gettrueseat.com";
   const vals = Array.isArray(values) ? values.filter(Boolean) : [];
@@ -83,7 +121,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
       { n: 3, title: "Internal Talent First", desc: "Before we look outside, we look inside.", page: 7 },
       { n: 4, title: "Developing Future Leaders", desc: "Prepare team members to step up before the need arises.", page: 9 },
       { n: 5, title: "The 8-Stage Recruiting Funnel", desc: "No shortcuts. Consistency produces better hiring decisions.", page: 11 },
-      { n: 6, title: "Interview System", desc: "Questions built from your own core values — scored the same way, every time.", page: 14 },
+      { n: 6, title: "Interview System", desc: "Questions built from " + shortName + "'s own core values — scored the same way, every time.", page: 14 },
       { n: 7, title: "The Hiring Decision Matrix", desc: "Objective scoring. No gut-feel shortcuts.", page: 19 },
       { n: 8, title: "Offer & 90-Day Success Plan", desc: "Success must be defined before the first day of work.", page: 21 },
       { n: 9, title: "Hiring Principles & Red Flags", desc: "Our non-negotiables and the warning signs we never ignore.", page: 23 },
@@ -214,7 +252,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
       { title: "Application & Resume Review", body: "Evaluate written evidence of performance, role progression, and stability. Red flags: frequent job changes, vague roles, no measurable outcomes." },
       { title: "Initial Phone Screen (15–20 min)", body: "Confirm role alignment, compensation, timeline, and basic qualifications. Filter for minimum viability before a full interview." },
       { title: "Structured Interview", body: "Focus exclusively on real performance evidence. What were they measured on, what did they accomplish, what did they fail at." },
-      { title: "Core Values Interview", body: "Each core value evaluated with behavioral questions, scored 5 / 3 / 1 — no 2s or 4s. A high skill score cannot offset a low values score." },
+      { title: "Core Values Interview", body: "Each " + shortName + " core value evaluated with behavioral questions, scored 5 / 3 / 1 — no 2s or 4s. A high skill score cannot offset a low values score." },
     ] })
       + `<div style="margin-top:22px; font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint);">Stages 5–8 continue &rarr;</div>`,
     pageNo: 12, pageTotal: PT,
@@ -238,7 +276,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
     brand: b, docTitle: DOC, sectionTitle: "Interview System",
     sectionNum: 6, sectionTotal: 9,
     headline: "Evaluate Results, Not Opinions.",
-    subhead: "Questions built from " + b.clientName + "'s own core values — scored the same way, every time.",
+    subhead: "Questions built from " + shortName + "'s own core values — scored the same way, every time.",
     pageNo: 14, pageTotal: PT,
   }));
 
@@ -250,7 +288,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
       + `<div style="margin-top:24px; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px;">How to Use This Section</div>`
       + `<p style="margin:0 0 26px; font-size:13.5px; line-height:1.6; color:var(--text-body); max-width:700px;">Ask the primary question, then let the candidate talk. Use the follow-up probes only after they've given their first answer — they surface the difference between a rehearsed story and a real one. Score against the rubric, not your gut. The pages that follow give the full script for each value.</p>`
       + P.navyCallout({ brand: b, eyebrow: "The Scoring Rule", headline: "A 3 is not a pass.",
-          body: "A candidate must score 5 on at least " + (vCount >= 2 ? "two" : "one") + " of the " + (vCount || "three") + " values to advance, with no 1s anywhere — the same gate we hold for promotions. Values are the one place we do not average away a weakness: a single 1 is a stop, not a rounding error." }),
+          body: "A candidate must score 5 on at least " + (vCount >= 2 ? "two" : "one") + " of the " + numberWord(vCount || 3) + " values to advance, with no 1s anywhere — the same gate we hold for promotions. Values are the one place we do not average away a weakness: a single 1 is a stop, not a rounding error." }),
     pageNo: 15, pageTotal: PT,
   }));
 
@@ -293,13 +331,19 @@ function buildPlaybookHTML({ ctx, brand, values }) {
       rows: [
         ["Role Fit", "Skills, experience, and competencies match the scorecard.", "10", "__ / 10"],
         ["PI Alignment", "Behavioral profile aligns with the defined job target.", "10", "__ / 10"],
-        ["Core Values", "Demonstrated alignment with all " + b.clientName + " core values.", "10", "__ / 10"],
+        ["Core Values", "Demonstrated alignment with all " + shortName + " core values.", "10", "__ / 10"],
         ["Skills & Experience", "Track record of measurable results in relevant roles.", "10", "__ / 10"],
         ["Culture Impact", "Will this person raise team energy and strengthen culture?", "10", "__ / 10"],
         ["TOTAL", "Context for the debrief — not a pass / fail line", "50", "__ / 50"],
-      ] })
-      + P.navyCallout({ brand: b, eyebrow: "The WOW Standard — Final Gate", headline: "Before making any offer, answer three questions:",
-          body: "Will this person raise the energy and performance of the team? Will they actively strengthen our culture — not just fit in? Will they represent " + b.clientName + " with pride and professionalism? If leadership is not genuinely excited about this hire — the answer is no." }),
+      ], darkRows: [5] })
+      + P.navyCallout({ brand: b, eyebrow: "The WOW Standard — Final Gate",
+          headline: "Before making any offer, answer three questions:",
+          bullets: [
+            "Will this person raise the energy and performance of the team?",
+            "Will they actively strengthen our culture — not just fit in?",
+            "Will they represent " + shortName + " with pride and professionalism?",
+          ],
+          closer: "If leadership is not genuinely excited about this hire — the answer is no." }),
     pageNo: counter, pageTotal: PT,
   }));
   counter += 1;
