@@ -311,6 +311,92 @@ function threeBucketBlock({ brand, items, variant = "light" }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  METRIC / DEFINITION TABLE PRIMITIVE  (multi-row light table, blue edge col)
+//  Reference: Playbook p.4 (Metric | What It Measures | Target),
+//             Playbook p.8 (Bench Rating | Definition | Action Required).
+//
+//  Generic N-column table. The LAST column gets the blue left-edge accent (the
+//  reference emphasis column: "Target" / "Action Required"). columns[] defines
+//  header labels; rows[] are arrays aligned to columns. First cell of each row
+//  renders bold (the row label), matching the reference.
+// ════════════════════════════════════════════════════════════════════════
+function metricTable({ brand, columns, rows }) {
+  const blue = brand.blue || "#1F6FB2";
+  const cols = Array.isArray(columns) ? columns : [];
+  const rws = Array.isArray(rows) ? rows.filter((r) => Array.isArray(r) && r.length) : [];
+  if (!cols.length || !rws.length) return "";
+  const lastIdx = cols.length - 1;
+
+  const head = `<tr style="background:var(--rac-off-white);">
+    ${cols.map((c, i) =>
+      `<td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${i === lastIdx ? blue : "var(--text-muted)"}; ${i === lastIdx ? `background:rgba(31,111,178,0.06);` : ""}">${esc(c)}</td>`
+    ).join("")}
+  </tr>`;
+
+  const body = rws.map((r) => `<tr style="border-top:1px solid var(--border-default);">
+    ${cols.map((_, i) => {
+      const val = r[i] == null ? "" : r[i];
+      const isFirst = i === 0;
+      const isLast = i === lastIdx;
+      return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:${isFirst ? "var(--text-strong)" : "var(--text-body)"}; font-weight:${isFirst ? 700 : (isLast ? 700 : 400)}; ${isLast ? `border-left:3px solid ${blue};` : ""}">${esc(val)}</td>`;
+    }).join("")}
+  </tr>`).join("");
+
+  return `<table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
+    <thead>${head}</thead><tbody>${body}</tbody>
+  </table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  SCORED-RUBRIC INTERVIEW TABLE PRIMITIVE  (value × question × 5/3/1)
+//  Reference: Playbook p.15 "Every Value Gets Evaluated. Every Time."
+//   Columns: Core Value | Behavioral Question | Score  (score col = blue edge,
+//   fixed "5 / 3 / 1" text — framework law, never a live number here).
+//   Loops values[]: reads name + question. Score cell is the literal 5 / 3 / 1.
+// ════════════════════════════════════════════════════════════════════════
+function scoredRubricTable({ brand, values }) {
+  const blue = brand.blue || "#1F6FB2";
+  const vals = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (!vals.length) return "";
+
+  const head = `<tr style="background:var(--rac-off-white);">
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); width:170px;">Core Value</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">Behavioral Question</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; background:rgba(31,111,178,0.06); width:96px;">Score</td>
+  </tr>`;
+
+  const body = vals.map((v) => `<tr style="border-top:1px solid var(--border-default);">
+    <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13.5px; color:var(--text-strong);">${esc(v.name || "")}</td>
+    <td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:var(--text-body);">${esc(v.question || "")}</td>
+    <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13px; color:var(--text-muted); border-left:3px solid ${blue}; white-space:nowrap;">5 / 3 / 1</td>
+  </tr>`).join("");
+
+  return `<table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
+    <thead>${head}</thead><tbody>${body}</tbody>
+  </table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  RED-FLAG BLOCK PRIMITIVE  (left-red-bar cards, "RED FLAG" tag right)
+//  Reference: Playbook p.24 "Red Flags — Never Ignore These".
+//   Each item = { title, note }. Red left edge, title + note left, "RED FLAG"
+//   label right in danger red. Stacked, unbounded.
+// ════════════════════════════════════════════════════════════════════════
+function redFlagBlock({ items }) {
+  const RED = "#B0201A";
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return "";
+  return list.map((it) => `
+    <div style="position:relative; background:var(--rac-white); border:1px solid var(--border-default); border-left:4px solid ${RED}; border-radius:2px; padding:16px 20px; margin:0 0 12px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+      <div style="min-width:0;">
+        <div style="font-size:15px; font-weight:700; color:var(--text-strong); margin:0 0 4px;">${esc(it.title || "")}</div>
+        ${it.note ? `<div style="font-size:13px; line-height:1.5; color:var(--text-muted);">${esc(it.note)}</div>` : ""}
+      </div>
+      <span style="flex:0 0 auto; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${RED}; padding-top:2px;">Red Flag</span>
+    </div>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  PROVEN PROOF PAGE — untouched (Playbook p.6 "No Scorecard. No Search.")
 // ════════════════════════════════════════════════════════════════════════
 const SCORECARD_ROWS = [
@@ -374,5 +460,7 @@ function scorecardNoSearchPage(brand) {
 
 module.exports = {
   esc, lightFooter, darkFooter, lightTitle, lightContentPage,
-  sectionOpenerPage, coreValuePage, threeBucketBlock, scorecardNoSearchPage,
+  sectionOpenerPage, coreValuePage, threeBucketBlock,
+  metricTable, scoredRubricTable, redFlagBlock,
+  scorecardNoSearchPage,
 };
