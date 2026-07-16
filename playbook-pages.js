@@ -742,9 +742,87 @@ function navyCallout({ brand, eyebrow, headline, body, bullets, closer }) {
   </div>`;
 }
 
+// ── core-values summary list (Culture pp.3 "Value | The Standard", p.23 recap) ──
+//  Renders values[] as a two-column reference: value name + its defining phrase
+//  (phraseOnly, the p.23 recap) or name + short definition (the p.3 foundation).
+//  Reads name + phrase + definition off the same values[]; degrades cleanly.
+function behaviorLadderCoreList({ brand, values, phraseOnly }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (!list.length) {
+    return `<p style="margin:0; font-size:14px; line-height:1.6; color:var(--text-faint);">Your core values will appear here once captured in onboarding.</p>`;
+  }
+  const rows = list.map((v, i) => {
+    const right = phraseOnly
+      ? (v.phrase ? "\u201c" + v.phrase + "\u201d" : "")
+      : (v.definition || v.phrase || "");
+    const divider = i < list.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : "";
+    return `<div style="display:flex; gap:24px; padding:14px 0 15px; ${divider}">
+      <div style="flex:0 0 200px; font-size:15px; font-weight:700; color:var(--text-strong);">${esc(v.name || "")}</div>
+      <div style="flex:1 1 auto; min-width:0; font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(right)}</div>
+    </div>`;
+  }).join("");
+  return `<div style="border-top:2px solid ${blue};">${rows}</div>`;
+}
+
 // ════════════════════════════════════════════════════════════════════════
-//  PROVEN PROOF PAGE — untouched (Playbook p.6 "No Scorecard. No Search.")
+//  BEHAVIOR-LADDER TABLE PRIMITIVE  (Culture Codified pp.8-10)
+//  One value's A-Player / Meets Standard / Unacceptable behavior standards.
+//   value.standards = { aPlayer:[…]|string, meets:[…]|string, unacceptable:[…] }
+//   Each level renders as a row: level label (tinted) | behaviors (middot-joined
+//   if array). A-Player row gets a faint blue tint (the aspirational top rung),
+//   Unacceptable a faint red tint (the floor). Matches the reference ladder.
+//   Reads the same values[] the playbook uses; standards{} comes from the
+//   expander (Culture branch) — so a value with no standards degrades cleanly.
 // ════════════════════════════════════════════════════════════════════════
+function behaviorLadderTable({ brand, standards }) {
+  const s = standards || {};
+  const RED = "#B0201A";
+  const join = (v) => Array.isArray(v)
+    ? v.filter(Boolean).join("  ·  ")
+    : String(v == null ? "" : v);
+  const rows = [
+    { label: "A-Player", tint: "rgba(31,111,178,0.05)", labelColor: "var(--text-strong)", body: join(s.aPlayer) },
+    { label: "Meets Standard", tint: "", labelColor: "var(--text-strong)", body: join(s.meets) },
+    { label: "Unacceptable", tint: "rgba(176,32,26,0.045)", labelColor: RED, body: join(s.unacceptable) },
+  ].filter((r) => r.body);
+  if (!rows.length) return "";
+  const BEIGE = "#EFEAE0";
+  const head = `<tr>
+    <td style="padding:12px 18px; width:150px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:${BEIGE};">Level</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:${BEIGE};">What It Looks Like Day to Day</td>
+  </tr>`;
+  const body = rows.map((r) => `<tr style="border-top:1px solid var(--border-default);">
+    <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13.5px; color:${r.labelColor}; ${r.tint ? `background:${r.tint};` : ""}">${esc(r.label)}</td>
+    <td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.55; color:var(--text-body); ${r.tint ? `background:${r.tint};` : ""}">${esc(r.body)}</td>
+  </tr>`).join("");
+  return `<table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
+    <thead>${head}</thead><tbody>${body}</tbody>
+  </table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  HIRING Q / LISTEN-FOR TABLE PRIMITIVE  (Culture Codified pp.16-18)
+//  One value's interview questions + what to listen for.
+//   pairs = [{ question, listenFor }]. Two columns, reference layout.
+// ════════════════════════════════════════════════════════════════════════
+function hiringQuestionTable({ brand, pairs }) {
+  const list = Array.isArray(pairs) ? pairs.filter((p) => p && (p.question || p.listenFor)) : [];
+  if (!list.length) return "";
+  const BEIGE = "#EFEAE0";
+  const blue = brand.blue || "#1F6FB2";
+  const head = `<tr>
+    <td style="padding:12px 18px; width:46%; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:${BEIGE};">Interview Question</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; background:rgba(31,111,178,0.06);">Listen For</td>
+  </tr>`;
+  const body = list.map((p) => `<tr style="border-top:1px solid var(--border-default);">
+    <td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:var(--text-strong); font-weight:700; background:rgba(31,111,178,0.035);">${esc(p.question || "")}</td>
+    <td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:var(--text-body); border-left:3px solid ${blue};">${esc(p.listenFor || "")}</td>
+  </tr>`).join("");
+  return `<table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
+    <thead>${head}</thead><tbody>${body}</tbody>
+  </table>`;
+}
 const SCORECARD_ROWS = [
   { c: "Role Title", weak: "\u201cOps person, kind of a catch-all.\u201d", strong: "Operations Manager \u2014 specific title and department." },
   { c: "Role Purpose", weak: "\u201cHelp keep things running.\u201d", strong: "One sentence: why the role exists and what problem it solves." },
@@ -816,5 +894,6 @@ module.exports = {
   numberedStageList, tocList, closingCtaPage,
   coverPage, leadInBullets, navyCallout,
   scorecardNoSearchPage,
+  behaviorLadderTable, hiringQuestionTable, behaviorLadderCoreList,
   pageInk, inkGradient, ringNest,
 };
