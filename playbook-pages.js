@@ -397,6 +397,239 @@ function redFlagBlock({ items }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  NUMBERED-STAGE LIST PRIMITIVE  (big blue numeral · title · body, stacked)
+//  Reference: Playbook p.10 (development track), p.12/p.13 (funnel stages),
+//             Culture p.8 (4-week rotation), Culture p.15 (manager expectations).
+//   item = { n?, title, tag?, body }. If n omitted, uses 1-based index.
+//   `tag` = the small blue label after the title (e.g. "RECOGNITION" on Culture
+//   p.8, or the stage side-label). Rows divided by a hairline, matching ref.
+// ════════════════════════════════════════════════════════════════════════
+function numberedStageList({ brand, items, startAt = 1 }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return "";
+  return list.map((it, i) => {
+    const num = it.n != null ? it.n : (startAt + i);
+    const tag = it.tag
+      ? ` <span style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:${blue}; margin-left:10px;">${esc(it.tag)}</span>`
+      : "";
+    const body = it.body
+      ? `<div style="font-size:13.5px; line-height:1.6; color:var(--text-body); margin-top:6px; max-width:640px;">${esc(it.body)}</div>`
+      : "";
+    const divider = i < list.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : "";
+    return `<div style="display:flex; gap:22px; padding:18px 0 20px; ${divider}">
+      <div style="flex:0 0 auto; width:34px; font-size:26px; font-weight:700; line-height:1; color:${blue};">${esc(String(num))}</div>
+      <div style="min-width:0;">
+        <span style="font-size:16px; font-weight:700; color:var(--text-strong);">${esc(it.title || "")}</span>${tag}
+        ${body}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  TABLE OF CONTENTS PRIMITIVE  (numbered index · title · dot-desc · page)
+//  Reference: Playbook p.1, Culture p.1.
+//   entries[] = { n?, title, desc?, page }. `n` optional (bullet if absent, as
+//   Culture p.1 uses ▲ / • for front/back matter). Page is the printed ref.
+// ════════════════════════════════════════════════════════════════════════
+function tocList({ brand, entries }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = Array.isArray(entries) ? entries.filter(Boolean) : [];
+  if (!list.length) return "";
+  return list.map((e, i) => {
+    const marker = e.n != null
+      ? `<span style="font-size:22px; font-weight:700; line-height:1; color:${blue};">${esc(String(e.n))}</span>`
+      : `<span style="font-size:16px; line-height:1; color:${blue};">&bull;</span>`;
+    const divider = i < list.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : "";
+    const desc = e.desc
+      ? `<div style="font-size:13px; line-height:1.45; color:var(--text-muted); margin-top:3px;">${esc(e.desc)}</div>`
+      : "";
+    return `<div style="display:flex; align-items:flex-start; gap:24px; padding:16px 0 18px; ${divider}">
+      <div style="flex:0 0 auto; width:30px; text-align:left;">${marker}</div>
+      <div style="flex:1 1 auto; min-width:0;">
+        <div style="font-size:16px; font-weight:700; color:var(--text-strong);">${esc(e.title || "")}</div>
+        ${desc}
+      </div>
+      <div style="flex:0 0 auto; font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--text-faint); padding-top:3px;">${esc(String(e.page == null ? "" : e.page).padStart(2, "0"))}</div>
+    </div>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  DARK CLOSING / CTA PAGE PRIMITIVE  (full-bleed navy back cover)
+//  Reference: Playbook back cover ("Ready to Build a World-Class Team?"),
+//             Culture back cover ("The Standard Is Set. Now Go Live It.").
+//   Rings top-LEFT (mirrored from openers), mountain-line bottom, eyebrow +
+//   big headline + blue rule + body + red/blue CTA button + partnership lockup.
+//   Base-brand furniture (Powered by Trueseat · in partnership with RAC) is
+//   PERMANENT per clients.js rule — always renders, cannot be themed off.
+// ════════════════════════════════════════════════════════════════════════
+function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ctaUrl, pageNo, pageTotal }) {
+  const navy = brand.navy || "#16242E";
+  const blue = brand.blue || "#1F6FB2";
+  const ringStroke = "rgba(120,170,220,0.20)";
+  const rings = `
+    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
+         style="position:absolute; top:-150px; left:-160px; overflow:visible;">
+      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
+        `<ellipse cx="200" cy="180" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
+      ).join("")}
+    </svg>`;
+  const mtnStroke = "rgba(150,175,200,0.13)";
+  const mountains = `
+    <svg width="1000" height="360" viewBox="0 0 1000 360" fill="none"
+         style="position:absolute; bottom:120px; left:-60px; overflow:visible;">
+      <polyline points="-60,360 120,250 240,300 430,120 560,250 700,180 860,290 1000,230"
+                stroke="${mtnStroke}" stroke-width="1.2" fill="none"/>
+    </svg>`;
+
+  const cta = ctaLabel
+    ? `<a href="${esc(ctaUrl || "#")}" style="display:inline-flex; align-items:center; gap:12px; background:${blue}; color:#FFFFFF; text-decoration:none; font-size:15px; font-weight:700; padding:16px 26px; border-radius:3px;">${esc(ctaLabel)} <span style="font-size:17px;">&rarr;</span></a>`
+    : "";
+  const ctaUrlText = ctaUrl
+    ? `<span style="font-size:13px; color:rgba(255,255,255,0.5); margin-left:18px;">${esc(ctaUrl.replace(/^https?:\/\//, ""))}</span>`
+    : "";
+
+  // permanent base-brand partnership lockup (cannot be themed off)
+  const lockup = `
+    <div style="position:absolute; left:64px; right:64px; bottom:44px; display:flex; justify-content:space-between; align-items:flex-end;">
+      <div style="display:flex; align-items:center; gap:34px;">
+        <div>
+          <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">Powered by</div>
+          <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Trueseat</div>
+        </div>
+        <div>
+          <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">In partnership with</div>
+          <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Ready Aim Climb</div>
+        </div>
+      </div>
+      <div style="text-align:right; font-size:10px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); line-height:1.6;">
+        &copy; 2026 ${esc(brand.clientName || "")}<br>${esc(docTitle || "")} &middot; Confidential
+      </div>
+    </div>`;
+
+  const eb = eyebrow
+    ? `<div style="font-size:12px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:${blue}; margin:0 0 20px;">${esc(eyebrow)}</div>`
+    : "";
+  const bd = body
+    ? `<p style="margin:26px 0 34px; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.62); max-width:520px;">${esc(body)}</p>`
+    : "";
+
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${navy}; color:#FFFFFF;">
+    ${rings}
+    ${mountains}
+    <div style="position:absolute; left:64px; right:64px; top:34%;">
+      ${eb}
+      <h1 style="margin:0; font-weight:700; font-size:58px; line-height:1.06; letter-spacing:-0.02em; color:#FFFFFF; max-width:640px;">${esc(headline)}</h1>
+      <div style="width:64px; height:4px; background:${blue}; margin:26px 0 0;"></div>
+      ${bd}
+      <div style="display:flex; align-items:center;">${cta}${ctaUrlText}</div>
+    </div>
+    ${lockup}
+  </section>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  COVER PAGE PRIMITIVE  (dark, reference pg 01)
+//  Navy full-bleed. Faint rings top-right + mountains bottom (same motif family
+//  as section-opener, lower opacity). "POWERED BY Trueseat" top-right. Logo mark
+//  + wordmark upper-left. Lower third: blue eyebrow, huge title, blue rule, grey
+//  subtitle. Bottom band: clientName · tagline · url. NO page counter (cover).
+//  logoMark/wordmark are optional — degrade to a text wordmark if no SVG given.
+// ════════════════════════════════════════════════════════════════════════
+function coverPage({ brand, eyebrow, title, subtitle, tagline, url }) {
+  const navy = brand.navy || "#16242E";
+  const blue = brand.blue || "#1F6FB2";
+
+  const ringStroke = "rgba(120,170,220,0.12)";
+  const rings = `
+    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
+         style="position:absolute; top:-140px; right:-160px; overflow:visible;">
+      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
+        `<ellipse cx="430" cy="200" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
+      ).join("")}
+    </svg>`;
+  const mtnStroke = "rgba(150,175,200,0.10)";
+  const mountains = `
+    <svg width="1000" height="340" viewBox="0 0 1000 340" fill="none"
+         style="position:absolute; bottom:150px; left:-40px; overflow:visible;">
+      <polyline points="-40,340 160,220 300,280 500,110 650,240 820,170 1000,250"
+                stroke="${mtnStroke}" stroke-width="1.2" fill="none"/>
+    </svg>`;
+
+  // logo mark: gear-ring + mountain (matches SUMMIT mark spirit; brand-driven)
+  const mark = `
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:${blue}; margin-bottom:22px;">
+      <svg width="32" height="26" viewBox="0 0 32 26" fill="none"><path d="M3 24 L12 7 L16 14 L20 3 L29 24 Z" fill="#FFFFFF"/></svg>
+    </span>`;
+
+  const poweredBy = `
+    <div style="position:absolute; top:60px; right:64px; text-align:right;">
+      <div style="font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.42); margin-bottom:6px;">Powered by</div>
+      <div style="font-size:15px; font-weight:700; color:rgba(255,255,255,0.9);">Trueseat</div>
+    </div>`;
+
+  const wordmark = `
+    <div style="position:absolute; top:60px; left:64px;">
+      ${mark}
+      <div style="font-size:30px; font-weight:800; letter-spacing:0.18em; color:#FFFFFF; line-height:1;">${esc((brand.clientName || "").split(" ")[0].toUpperCase() || "")}</div>
+      ${brand.clientName && brand.clientName.split(" ").length > 1
+        ? `<div style="font-size:15px; font-weight:700; letter-spacing:0.28em; color:${blue}; margin-top:6px;">${esc(brand.clientName.split(" ").slice(1).join(" ").toUpperCase())}</div>`
+        : ""}
+      ${tagline ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-top:8px;">${esc(tagline)}</div>` : ""}
+    </div>`;
+
+  const titleBlock = `
+    <div style="position:absolute; left:64px; right:64px; top:60%;">
+      ${eyebrow ? `<div style="font-size:12px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:${blue}; margin:0 0 18px;">${esc(eyebrow)}</div>` : ""}
+      <h1 style="margin:0; font-weight:700; font-size:56px; line-height:1.06; letter-spacing:-0.02em; color:#FFFFFF; max-width:640px;">${esc(title)}</h1>
+      <div style="width:64px; height:4px; background:${blue}; margin:26px 0 0;"></div>
+      ${subtitle ? `<p style="margin:24px 0 0; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.6); max-width:520px;">${esc(subtitle)}</p>` : ""}
+    </div>`;
+
+  const bottomBand = `
+    <div style="position:absolute; left:64px; right:64px; bottom:44px; display:flex; justify-content:space-between; align-items:center; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:rgba(255,255,255,0.4);">
+      <span style="color:rgba(255,255,255,0.75);">${esc(brand.clientName || "")}</span>
+      ${tagline ? `<span>${esc(tagline)}</span>` : "<span></span>"}
+      ${url ? `<span>${esc(url.replace(/^https?:\/\//, ""))}</span>` : "<span></span>"}
+    </div>`;
+
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${navy}; color:#FFFFFF;">
+    ${rings}${mountains}${poweredBy}${wordmark}${titleBlock}${bottomBand}
+  </section>`;
+}
+
+// ── lead-in bullets: bold phrase + body on one line (ref pg 04 principles) ──
+function leadInBullets({ brand, items }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return "";
+  return `<div>${list.map((it) => `
+    <div style="display:flex; align-items:flex-start; margin:0 0 16px;">
+      <span style="display:inline-block; width:8px; height:8px; background:${blue}; margin:7px 14px 0 0; flex:0 0 auto;"></span>
+      <div style="font-size:14.5px; line-height:1.55; color:var(--text-body);">
+        ${it.lead ? `<strong style="color:var(--text-strong); font-weight:700;">${esc(it.lead)}</strong> ` : ""}${esc(it.body || "")}
+      </div>
+    </div>`).join("")}</div>`;
+}
+
+// ── navy inset callout (ref pg 04 "We hire slow and hold the line") ──
+//  Blue right-edge accent (offset shadow), blue eyebrow, white headline, body.
+function navyCallout({ brand, eyebrow, headline, body }) {
+  const navy = brand.navy || "#16242E";
+  const blue = brand.blue || "#1F6FB2";
+  return `<div style="position:relative; margin:0 0 30px;">
+    <div style="position:absolute; top:8px; left:8px; right:-8px; bottom:-8px; background:${blue}; border-radius:2px;"></div>
+    <div style="position:relative; background:${navy}; border-radius:2px; padding:26px 30px;">
+      ${eyebrow ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${blue}; margin-bottom:10px;">${esc(eyebrow)}</div>` : ""}
+      ${headline ? `<div style="font-size:21px; font-weight:700; line-height:1.25; color:#FFFFFF; margin-bottom:${body ? 12 : 0}px;">${esc(headline)}</div>` : ""}
+      ${body ? `<div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.72);">${esc(body)}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  PROVEN PROOF PAGE — untouched (Playbook p.6 "No Scorecard. No Search.")
 // ════════════════════════════════════════════════════════════════════════
 const SCORECARD_ROWS = [
@@ -462,5 +695,7 @@ module.exports = {
   esc, lightFooter, darkFooter, lightTitle, lightContentPage,
   sectionOpenerPage, coreValuePage, threeBucketBlock,
   metricTable, scoredRubricTable, redFlagBlock,
+  numberedStageList, tocList, closingCtaPage,
+  coverPage, leadInBullets, navyCallout,
   scorecardNoSearchPage,
 };
