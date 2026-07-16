@@ -77,25 +77,32 @@ function sectionOpenerPage({
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
 
-  // concentric rings, top-right, bleeding off the corner (ellipses, nested)
-  const ringStroke = "rgba(120,170,220,0.22)";
+  // concentric rings, top-right, bleeding off the corner. Reference draws a
+  // dense stack of ~10 fine, near-circular ellipses that read as a radar/ripple
+  // echo anchored into the corner (outermost rings clip off the top and right
+  // edges). rx/ry ~1.12 keeps them near-circular (not the flattened loops of v1).
+  const ringStroke = "rgba(120,170,220,0.20)";
   const rings = `
-    <svg width="520" height="420" viewBox="0 0 520 420" fill="none"
-         style="position:absolute; top:-70px; right:-80px; overflow:visible;">
-      ${[40, 82, 128, 178, 232, 290].map((r) =>
-        `<ellipse cx="360" cy="150" rx="${r * 1.35}" ry="${r}" stroke="${ringStroke}" stroke-width="1.1"/>`
+    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
+         style="position:absolute; top:-120px; right:-140px; overflow:visible;">
+      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
+        `<ellipse cx="430" cy="200" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
       ).join("")}
     </svg>`;
 
-  // mountain-line motif, bottom-left, bleeding off the corner
-  const mtnStroke = "rgba(150,175,200,0.16)";
+  // mountain-line motif, bottom-left, bleeding off the corner. Reference shows
+  // two overlapping ranges: a front range with a distinct TALL central peak and
+  // a lower back range offset behind it, both bleeding off the left and bottom.
+  // Vertex rhythm matches the reference silhouette (sharp central summit, not a
+  // uniform zigzag).
+  const mtnStroke = "rgba(150,175,200,0.15)";
   const mountains = `
-    <svg width="900" height="300" viewBox="0 0 900 300" fill="none"
-         style="position:absolute; bottom:64px; left:-40px; overflow:visible;">
-      <polyline points="-40,300 150,150 250,220 430,70 560,200 700,120 900,240"
+    <svg width="1000" height="360" viewBox="0 0 1000 360" fill="none"
+         style="position:absolute; bottom:70px; left:-60px; overflow:visible;">
+      <polyline points="-60,360 120,250 240,300 430,120 560,250 700,180 860,290 1000,230"
                 stroke="${mtnStroke}" stroke-width="1.2" fill="none"/>
-      <polyline points="-40,300 120,200 300,250 470,140 640,250 820,180 900,270"
-                stroke="${mtnStroke}" stroke-width="1.2" fill="none"/>
+      <polyline points="-60,360 180,300 340,330 470,210 650,320 800,260 1000,310"
+                stroke="rgba(150,175,200,0.10)" stroke-width="1.2" fill="none"/>
     </svg>`;
 
   // top bar: mini mountain-mark + section title (left) · section counter (right)
