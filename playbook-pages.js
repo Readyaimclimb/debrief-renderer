@@ -241,6 +241,76 @@ function coreValuePage({ brand, docTitle, value, idx, total, pageNo, pageTotal }
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  SHARED: light content-page shell (title block over inner content)
+//  Every light interior page shares this frame. coreValuePage predates it and
+//  keeps its own inline frame; new light primitives use this.
+// ════════════════════════════════════════════════════════════════════════
+function lightContentPage({ brand, docTitle, eyebrow, title, intro, inner, pageNo, pageTotal }) {
+  const body = `
+    ${lightTitle(brand, eyebrow, title, { intro })}
+    ${inner || ""}
+  `;
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:var(--rac-cream); color:var(--text-strong);">
+    <div style="position:absolute; inset:0; padding:60px 64px;">${body}</div>
+    ${lightFooter(brand, docTitle, pageNo, pageTotal)}
+  </section>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  THREE-BUCKET PRIMITIVE  (3-up card row)
+//  Reference: Culture p.3 (Model/Reinforce/Coach — title + body),
+//             Playbook p.22 (Learn/Apply/Contribute — eyebrow + title + bullets),
+//             Culture p.16 (dark numbered variant — title + body).
+//
+//  One function, three shapes driven by data + `variant`:
+//   • item = { eyebrow?, title, body?, bullets?[] }
+//   • variant "light" (default): white cards, blue top-rule, on cream page
+//   • variant "dark": navy cards, blue top-rule, muted-white text (for dark pages)
+//  Cards are length-agnostic: 2 or 3 or 4 buckets all lay out evenly.
+//  Every optional field guarded before its block emits.
+// ════════════════════════════════════════════════════════════════════════
+function threeBucketBlock({ brand, items, variant = "light" }) {
+  const blue = brand.blue || "#1F6FB2";
+  const navy = brand.navy || "#16242E";
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return "";
+
+  const dark = variant === "dark";
+  const cardBg = dark ? navy : "var(--rac-white)";
+  const cardBorder = dark ? "rgba(255,255,255,0.10)" : "1px solid var(--border-default)";
+  const titleColor = dark ? "#FFFFFF" : "var(--text-strong)";
+  const bodyColor = dark ? "rgba(255,255,255,0.72)" : "var(--text-body)";
+  const eyebrowColor = blue;
+  const bulletColor = blue;
+
+  const card = (it) => {
+    const eyebrow = it.eyebrow
+      ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${eyebrowColor}; margin:0 0 8px;">${esc(it.eyebrow)}</div>`
+      : "";
+    const title = it.title
+      ? `<div style="font-size:20px; font-weight:700; line-height:1.15; color:${titleColor}; margin:0 0 ${it.body || (it.bullets && it.bullets.length) ? 10 : 0}px;">${esc(it.title)}</div>`
+      : "";
+    const body = it.body
+      ? `<div style="font-size:13.5px; line-height:1.55; color:${bodyColor};">${esc(it.body)}</div>`
+      : "";
+    const bullets = Array.isArray(it.bullets) && it.bullets.filter(Boolean).length
+      ? `<div style="margin-top:4px;">${it.bullets.filter(Boolean).map((b) =>
+          `<div style="display:flex; align-items:flex-start; margin:0 0 9px;">
+            <span style="display:inline-block; width:6px; height:6px; background:${bulletColor}; margin:6px 10px 0 0; flex:0 0 auto;"></span>
+            <span style="font-size:13px; line-height:1.45; color:${bodyColor};">${esc(b)}</span>
+          </div>`).join("")}</div>`
+      : "";
+    return `<div style="flex:1 1 0; min-width:0; background:${cardBg}; border:${cardBorder}; border-top:3px solid ${blue}; border-radius:2px; padding:22px 22px 24px; box-sizing:border-box;">
+      ${eyebrow}${title}${body}${bullets}
+    </div>`;
+  };
+
+  return `<div style="display:flex; gap:20px; margin:0 0 8px; align-items:stretch;">
+    ${list.map(card).join("")}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  PROVEN PROOF PAGE — untouched (Playbook p.6 "No Scorecard. No Search.")
 // ════════════════════════════════════════════════════════════════════════
 const SCORECARD_ROWS = [
@@ -303,6 +373,6 @@ function scorecardNoSearchPage(brand) {
 }
 
 module.exports = {
-  esc, lightFooter, darkFooter, lightTitle,
-  sectionOpenerPage, coreValuePage, scorecardNoSearchPage,
+  esc, lightFooter, darkFooter, lightTitle, lightContentPage,
+  sectionOpenerPage, coreValuePage, threeBucketBlock, scorecardNoSearchPage,
 };
