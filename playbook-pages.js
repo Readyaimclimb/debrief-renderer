@@ -639,10 +639,15 @@ const SCORECARD_ROWS = [
   { c: "Behavioral Target", weak: "\u201cGood attitude.\u201d", strong: "The Predictive Index pattern that best fits this role, set before posting." },
 ];
 
-function scorecardNoSearchPage(brand) {
+function scorecardNoSearchPage(brand, pageNo, pageTotal) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
   const eyebrow = "The non-negotiable first step";
+  // footer counter: defaults to the proven standalone value (06 / 24) so the
+  // standalone proof route is unchanged; the full assembler passes 6 / PT.
+  const footNum = (pageNo != null && pageTotal != null)
+    ? `${String(pageNo).padStart(2, "0")} / ${String(pageTotal).padStart(2, "0")}`
+    : "06 / 24";
 
   const rows = SCORECARD_ROWS.map((r, i) => `
     <tr style="border-top:1px solid var(--border-default);">
@@ -686,7 +691,7 @@ function scorecardNoSearchPage(brand) {
     <div style="position:absolute; left:64px; right:64px; bottom:30px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-subtle); padding-top:12px; font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint);">
       <span>${esc(brand.clientName || "Summit Mechanical")}</span>
       <span>Hiring &amp; Talent Development Playbook</span>
-      <span>06 / 24</span>
+      <span>${footNum}</span>
     </div>
   </section>`;
 }
