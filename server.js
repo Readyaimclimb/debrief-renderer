@@ -267,9 +267,76 @@ app.post("/jobad-pdf", async (req, res) => {
 //  route is the only throwaway. Remove after the diff passes.
 app.get("/playbook-proof", async (req, res) => {
   try {
+    // Summit's 3 core values, transcribed verbatim off the reference decks
+    // (Hiring Playbook pp.16-18 + Culture Codified pp.5-7). Inlined here because
+    // this route is throwaway — deleted once the render diff passes. The real
+    // build reads values[] from the tenant's live clients.js config.
+    const PROOF_VALUES = [
+      {
+        name: "Extreme Ownership",
+        definition: "We own outcomes, not excuses. When something fails on our watch, we fix it and we say so.",
+        question: "Tell me about a time something failed and it was your fault. What happened next?",
+        probes: [
+          "What did it cost \u2014 you, the team, the customer?",
+          "What specifically did you change afterward, and is it still in place?",
+          "Who else could confirm the story the way you're telling it?",
+        ],
+        listenFor: [
+          "Describes the failure in first person, without blaming circumstances or predecessors",
+          "Names what they changed after the failure \u2014 not just what went wrong",
+          "Can point to a system or habit that exists today because of it",
+        ],
+        rubric: {
+          concern: "Describes the failure in third person. Circumstances, predecessors, or teammates carry the blame.",
+          developing: "Owns the miss when pressed, but cannot name what specifically changed afterward.",
+          strong: "First-person ownership, a specific change that followed, and a system or habit still in place today.",
+        },
+      },
+      {
+        name: "Do What You Say",
+        definition: "Commitments are sacred. We close every loop \u2014 or renegotiate it out loud before the deadline.",
+        question: "Tell me about a commitment you realized you couldn't keep. What did you do, and when?",
+        probes: [
+          "At what point did you know it was at risk?",
+          "Who did you tell, and how early?",
+          "What did it cost you to raise it instead of staying quiet?",
+        ],
+        listenFor: [
+          "Gives examples of keeping commitments at personal cost",
+          "Renegotiates proactively rather than going quiet when a commitment is at risk",
+          "Flags risk early \u2014 the timeline in the story is measured in days, not hours before the deadline",
+        ],
+        rubric: {
+          concern: "Went quiet, hoped nobody noticed, or reframes the miss as someone else's misunderstanding.",
+          developing: "Told someone eventually, but late \u2014 closer to the deadline than to the moment they knew.",
+          strong: "Flagged it early, renegotiated openly, and can name what it cost them to do so.",
+        },
+      },
+      {
+        name: "We Before Me",
+        definition: "The team's win outranks personal credit. We share information, share credit, and back decisions we argued against.",
+        question: "Tell me about a decision you argued hard against \u2014 and lost. What did you do after?",
+        probes: [
+          "How did you argue it \u2014 and when did you stop arguing?",
+          "What did you say to the team once the decision was made?",
+          "Did you execute it fully, or slow-walk it?",
+        ],
+        listenFor: [
+          "Credits others by name when describing wins",
+          "Supports majority decisions they personally opposed",
+          "Separates the disagreement (before) from the execution (after) cleanly",
+        ],
+        rubric: {
+          concern: "Wins are \u201cI,\u201d failures are \u201cthey.\u201d Undermined or slow-walked decisions they disagreed with.",
+          developing: "Backed the decision publicly but you can hear lingering resentment or half-effort.",
+          strong: "Names teammates in wins without prompting; executed the opposed decision fully and says why that mattered.",
+        },
+      },
+    ];
     const html = buildPlaybookHTML({
       ctx: { company: "Summit Mechanical" },
-      brand: { clientName: "Summit Mechanical", navy: "#16242E", blue: "#1F6FB2" },
+      brand: { clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
+      values: PROOF_VALUES,
     });
     const browser = await getBrowser();
     const page = await browser.newPage();
