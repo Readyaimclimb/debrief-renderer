@@ -14,6 +14,75 @@
 const esc = (s) => String(s == null ? "" : s)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// ── pageInk: the near-black used for DARK PAGE BACKGROUNDS + navy callout fills ──
+//  AUDIT FIX #1/#2 (systemic). The reference paints dark pages a near-black navy
+//  (sampled #121E28 top → #0C151C bottom); the client's brand.navy (#171758 for
+//  Summit) is only a small ACCENT there, never the large fill. brand.navy was
+//  doing two jobs. This derives a near-black that PRESERVES the client's navy hue
+//  (so it still themes per-tenant — applied, not defaulted) but always lands in
+//  the reference's dark band. Returns { top, bottom, solid } for gradient pages
+//  and callouts. brand.navy stays the ACCENT (rules, eyebrows, marks); brand.blue
+//  unchanged. Pure function of the client navy — no new client field required.
+function pageInk(brand) {
+  // The reference dark background is a NEUTRAL blue-black, sampled #121E28 (top)
+  // → #0C151C (bottom), callout solid ≈ #141E2A. It is NOT the client accent
+  // crushed dark — Summit's #171758 is a purple-indigo, but the reference page
+  // ink stays neutral navy regardless. So we ANCHOR on the reference near-black
+  // and blend only a LIGHT tint (12%) of the client navy hue, so tenants differ
+  // subtly without ever drifting off the reference's neutral dark band. The
+  // client hue lives in the ACCENT (brand.navy / brand.blue), not here.
+  const REF = { top: [0x12, 0x1e, 0x28], bottom: [0x0c, 0x15, 0x1c], solid: [0x14, 0x1e, 0x2a] };
+  const hex = (brand && brand.navy) || "";
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  const toHex = (arr) => "#" + arr.map((c) => Math.min(255, Math.max(0, Math.round(c))).toString(16).padStart(2, "0")).join("");
+  if (!m) return { top: toHex(REF.top), bottom: toHex(REF.bottom), solid: toHex(REF.solid) };
+  const n = parseInt(m[1], 16);
+  const cr = (n >> 16) & 255, cg = (n >> 8) & 255, cb = n & 255;
+  const cmax = Math.max(cr, cg, cb, 1);
+  const TINT = 0.12;   // how much client hue bleeds into the neutral ink
+  // scale the client hue down to each ref target's brightness, then blend.
+  const mk = (base) => {
+    const target = Math.max(...base);
+    const hr = (cr / cmax) * target, hg = (cg / cmax) * target, hb = (cb / cmax) * target;
+    return toHex([
+      base[0] * (1 - TINT) + hr * TINT,
+      base[1] * (1 - TINT) + hg * TINT,
+      base[2] * (1 - TINT) + hb * TINT,
+    ]);
+  };
+  return { top: mk(REF.top), bottom: mk(REF.bottom), solid: mk(REF.solid) };
+}
+
+// convenience: the CSS gradient string for a dark full-bleed page background.
+function inkGradient(brand) {
+  const ink = pageInk(brand);
+  return `linear-gradient(180deg, ${ink.top} 0%, ${ink.bottom} 100%)`;
+}
+
+// ── ring nest: the concentric-ellipse motif on dark pages (AUDIT FIX #3) ──
+//  The reference draws ~7 nested ellipses, FLATTENED (aspect ≈ 2.2:1, i.e. rx ≈
+//  2.2·ry), centered ON the page around (x ≈ 72% of the 816 width ≈ 588, y ≈ 80),
+//  innermost a discrete visible outline, faint blue-grey stroke (~18% alpha),
+//  cleared of the top-right section counter. The old motif drew ~10 NEAR-CIRCULAR
+//  rings radiating from an OFF-PAGE corner point, denser/brighter, overlapping the
+//  counter — the #2 "screams generated" defect. One helper now feeds opener, cover,
+//  and back cover so the geometry can't drift between them.
+//    cx,cy   = ellipse center in page coords (816×1056 space)
+//    alpha   = stroke opacity (openers a touch stronger than cover/back)
+//  ry steps ~27→155 (7 rings); rx = ry·2.2. SVG spans the full page; overflow
+//  hidden by the page's own overflow:hidden so the outer rings clip at the edges.
+function ringNest({ cx, cy, alpha = 0.18 }) {
+  const stroke = `rgba(150,180,215,${alpha})`;
+  const rys = [27, 48, 72, 99, 124, 150, 178];   // 7 rings, innermost visible
+  const ell = rys.map((ry) =>
+    `<ellipse cx="${cx}" cy="${cy}" rx="${Math.round(ry * 2.2)}" ry="${ry}" stroke="${stroke}" stroke-width="1" vector-effect="non-scaling-stroke"/>`
+  ).join("");
+  return `<svg width="816" height="1056" viewBox="0 0 816 1056" fill="none"
+       style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
+    ${ell}
+  </svg>`;
+}
+
 // ── shared: footer for a LIGHT page (three-span: client · doc · NN / TT) ──
 //  Matches the reference light-page footer exactly (SUMMIT MECHANICAL ·
 //  HIRING & TALENT DEVELOPMENT PLAYBOOK · 06 / 24). pageNo/pageTotal are the
@@ -76,19 +145,12 @@ function sectionOpenerPage({
 }) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
+  const bg = inkGradient(brand);  // AUDIT #1: near-black dark bg, not flat #171758
 
-  // concentric rings, top-right, bleeding off the corner. Reference draws a
-  // dense stack of ~10 fine, near-circular ellipses that read as a radar/ripple
-  // echo anchored into the corner (outermost rings clip off the top and right
-  // edges). rx/ry ~1.12 keeps them near-circular (not the flattened loops of v1).
-  const ringStroke = "rgba(120,170,220,0.20)";
-  const rings = `
-    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
-         style="position:absolute; top:-120px; right:-140px; overflow:visible;">
-      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
-        `<ellipse cx="430" cy="200" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
-      ).join("")}
-    </svg>`;
+  // concentric rings — AUDIT #3: reference flattened-ellipse nest, on-page,
+  // centered ~72% width / y≈80, cleared of the top-right counter (which sits at
+  // y≈60). Center pushed to y=96 so the innermost ring clears the 01/09 counter.
+  const rings = ringNest({ cx: 588, cy: 96, alpha: 0.18 });
 
   // mountain-line motif, bottom-left, bleeding off the corner. Reference shows
   // two overlapping ranges: a front range with a distinct TALL central peak and
@@ -122,18 +184,20 @@ function sectionOpenerPage({
         : ""}
     </div>`;
 
-  // headline block, vertically centered low (reference sits it ~55% down)
+  // headline block — AUDIT #4: cap-glyph ≈ 40px (was 48px rendered at 64px font,
+  // ~20% over) and RAISED so the first line top lands at y≈458/1056 (was ≈557).
+  // 44px font gives ~40px cap height in Arimo; absolute top:458px pins the block.
   const sub = subhead
-    ? `<p style="margin:26px 0 0; font-size:17px; line-height:1.5; color:rgba(255,255,255,0.62); max-width:560px;">${esc(subhead)}</p>`
+    ? `<p style="margin:24px 0 0; font-size:16px; line-height:1.5; color:rgba(255,255,255,0.62); max-width:560px;">${esc(subhead)}</p>`
     : "";
   const headlineBlock = `
-    <div style="position:absolute; left:64px; right:64px; top:52%;">
-      <h1 style="margin:0; font-weight:700; font-size:64px; line-height:1.05; letter-spacing:-0.02em; color:#FFFFFF; max-width:660px;">${esc(headline)}</h1>
-      <div style="width:64px; height:4px; background:${blue}; margin:28px 0 0;"></div>
+    <div style="position:absolute; left:64px; right:64px; top:458px;">
+      <h1 style="margin:0; font-weight:700; font-size:44px; line-height:1.08; letter-spacing:-0.02em; color:#FFFFFF; max-width:600px;">${esc(headline)}</h1>
+      <div style="width:64px; height:4px; background:${blue}; margin:26px 0 0;"></div>
       ${sub}
     </div>`;
 
-  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${navy}; color:#FFFFFF;">
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${bg}; color:#FFFFFF;">
     ${rings}
     ${mountains}
     ${topBar}
@@ -160,13 +224,14 @@ function sectionOpenerPage({
 function coreValuePage({ brand, docTitle, value, idx, total, pageNo, pageTotal }) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
+  const ink = pageInk(brand).solid;   // AUDIT #2: callout fill = near-black, not #171758
   const v = value || {};
 
   const eyebrow = `Core Value · ${idx} of ${total}`;
 
   // navy question callout (only if a question exists)
   const questionCallout = v.question
-    ? `<div style="position:relative; background:${navy}; border-radius:2px; padding:22px 26px; margin:0 0 30px;">
+    ? `<div style="position:relative; background:${ink}; border-radius:2px; padding:22px 26px; margin:0 0 30px;">
          <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:${blue};"></div>
          <div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${blue}; margin-bottom:10px;">The Question</div>
          <div style="font-size:19px; font-weight:700; line-height:1.35; color:#FFFFFF;">\u201c${esc(v.question)}\u201d</div>
@@ -196,20 +261,24 @@ function coreValuePage({ brand, docTitle, value, idx, total, pageNo, pageTotal }
 
   // scoring rubric — fixed 1 / 3 / 5, no 2 or 4, ever
   const r = v.rubric || {};
-  const rubricRow = (score, label, scoreColor, text) => {
+  // AUDIT #10: reference rubric labels are "1 · Concern / 3 · Developing /
+  // 5 · Strong" — bold NAVY score+label, middot separator, sentence case, NO
+  // per-score color coding, NO uppercase letterspacing; first column light-tinted.
+  const rubricRow = (score, label, text) => {
     if (!text) return "";
     return `<tr style="border-top:1px solid var(--border-default);">
-      <td style="padding:16px 18px; vertical-align:top; width:160px; white-space:nowrap;">
-        <span style="font-weight:700; font-size:14px; color:${scoreColor};">${score}</span>
-        <span style="font-weight:700; font-size:12px; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted); margin-left:6px;">${esc(label)}</span>
+      <td style="padding:16px 18px; vertical-align:top; width:160px; white-space:nowrap; background:rgba(31,111,178,0.04);">
+        <span style="font-weight:700; font-size:14px; color:var(--text-strong);">${score}</span>
+        <span style="font-weight:700; font-size:14px; color:var(--text-strong); margin:0 4px;">&middot;</span>
+        <span style="font-weight:700; font-size:13.5px; color:var(--text-strong);">${esc(label)}</span>
       </td>
       <td style="padding:16px 18px; vertical-align:top; font-size:13.5px; line-height:1.55; color:var(--text-body);">${esc(text)}</td>
     </tr>`;
   };
   const rubricRows = [
-    rubricRow("1", "Concern", "#B0201A", r.concern),
-    rubricRow("3", "Developing", "#555555", r.developing),
-    rubricRow("5", "Strong", (brand.blue || "#1F6FB2"), r.strong),
+    rubricRow("1", "Concern", r.concern),
+    rubricRow("3", "Developing", r.developing),
+    rubricRow("5", "Strong", r.strong),
   ].join("");
   const rubricBlock = rubricRows
     ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">Scoring Rubric</div>
@@ -320,12 +389,17 @@ function threeBucketBlock({ brand, items, variant = "light" }) {
 //  header labels; rows[] are arrays aligned to columns. First cell of each row
 //  renders bold (the row label), matching the reference.
 // ════════════════════════════════════════════════════════════════════════
-function metricTable({ brand, columns, rows }) {
+function metricTable({ brand, columns, rows, darkRows }) {
   const blue = brand.blue || "#1F6FB2";
+  const ink = pageInk(brand).solid;   // AUDIT #7: dark-row fill = near-black
   const cols = Array.isArray(columns) ? columns : [];
   const rws = Array.isArray(rows) ? rows.filter((r) => Array.isArray(r) && r.length) : [];
   if (!cols.length || !rws.length) return "";
   const lastIdx = cols.length - 1;
+  // AUDIT #7: rows whose index is in darkRows render as a FULL dark row — every
+  // cell inked, white text, no blue edge (the P21 decision-matrix TOTAL row).
+  // Default [] preserves every existing caller unchanged.
+  const darkSet = new Set(Array.isArray(darkRows) ? darkRows : []);
 
   const head = `<tr style="background:var(--rac-off-white);">
     ${cols.map((c, i) =>
@@ -333,14 +407,25 @@ function metricTable({ brand, columns, rows }) {
     ).join("")}
   </tr>`;
 
-  const body = rws.map((r) => `<tr style="border-top:1px solid var(--border-default);">
-    ${cols.map((_, i) => {
-      const val = r[i] == null ? "" : r[i];
-      const isFirst = i === 0;
-      const isLast = i === lastIdx;
-      return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:${isFirst ? "var(--text-strong)" : "var(--text-body)"}; font-weight:${isFirst ? 700 : (isLast ? 700 : 400)}; ${isLast ? `border-left:3px solid ${blue};` : ""}">${esc(val)}</td>`;
-    }).join("")}
-  </tr>`).join("");
+  const body = rws.map((r, ri) => {
+    const isDark = darkSet.has(ri);
+    if (isDark) {
+      return `<tr style="border-top:1px solid var(--border-default); background:${ink};">
+        ${cols.map((_, i) => {
+          const val = r[i] == null ? "" : r[i];
+          return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:#FFFFFF; font-weight:700;">${esc(val)}</td>`;
+        }).join("")}
+      </tr>`;
+    }
+    return `<tr style="border-top:1px solid var(--border-default);">
+      ${cols.map((_, i) => {
+        const val = r[i] == null ? "" : r[i];
+        const isFirst = i === 0;
+        const isLast = i === lastIdx;
+        return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:${isFirst ? "var(--text-strong)" : "var(--text-body)"}; font-weight:${isFirst ? 700 : (isLast ? 700 : 400)}; ${isLast ? `border-left:3px solid ${blue};` : ""}">${esc(val)}</td>`;
+      }).join("")}
+    </tr>`;
+  }).join("");
 
   return `<table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
     <thead>${head}</thead><tbody>${body}</tbody>
@@ -468,14 +553,11 @@ function tocList({ brand, entries }) {
 function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ctaUrl, pageNo, pageTotal }) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
-  const ringStroke = "rgba(120,170,220,0.20)";
-  const rings = `
-    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
-         style="position:absolute; top:-150px; left:-160px; overflow:visible;">
-      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
-        `<ellipse cx="200" cy="180" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
-      ).join("")}
-    </svg>`;
+  const bg = inkGradient(brand);  // AUDIT #1: near-black dark bg
+  // AUDIT #3/#6: reference nests the ring motif in the TOP-LEFT corner (with the
+  // client badge inside it — badge wiring is the gated logo pass). Flattened
+  // ellipse nest, on-page, mirrored to the left.
+  const rings = ringNest({ cx: 150, cy: 150, alpha: 0.16 });
   const mtnStroke = "rgba(150,175,200,0.13)";
   const mountains = `
     <svg width="1000" height="360" viewBox="0 0 1000 360" fill="none"
@@ -516,7 +598,7 @@ function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ct
     ? `<p style="margin:26px 0 34px; font-size:16px; line-height:1.6; color:rgba(255,255,255,0.62); max-width:520px;">${esc(body)}</p>`
     : "";
 
-  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${navy}; color:#FFFFFF;">
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${bg}; color:#FFFFFF;">
     ${rings}
     ${mountains}
     <div style="position:absolute; left:64px; right:64px; top:34%;">
@@ -541,15 +623,10 @@ function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ct
 function coverPage({ brand, eyebrow, title, subtitle, tagline, url }) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
-
-  const ringStroke = "rgba(120,170,220,0.12)";
-  const rings = `
-    <svg width="620" height="520" viewBox="0 0 620 520" fill="none"
-         style="position:absolute; top:-140px; right:-160px; overflow:visible;">
-      ${[26, 52, 80, 110, 143, 179, 218, 260, 305, 353].map((r) =>
-        `<ellipse cx="430" cy="200" rx="${Math.round(r * 1.12)}" ry="${r}" stroke="${ringStroke}" stroke-width="1"/>`
-      ).join("")}
-    </svg>`;
+  const bg = inkGradient(brand);  // AUDIT #1: near-black dark bg
+  // AUDIT #5: the reference COVER has NO visible ring clusters — removed entirely
+  // (the added top-right/lower-right rings were a "screams generated" defect).
+  const rings = "";
   const mtnStroke = "rgba(150,175,200,0.10)";
   const mountains = `
     <svg width="1000" height="340" viewBox="0 0 1000 340" fill="none"
@@ -595,7 +672,7 @@ function coverPage({ brand, eyebrow, title, subtitle, tagline, url }) {
       ${url ? `<span>${esc(url.replace(/^https?:\/\//, ""))}</span>` : "<span></span>"}
     </div>`;
 
-  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${navy}; color:#FFFFFF;">
+  return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${bg}; color:#FFFFFF;">
     ${rings}${mountains}${poweredBy}${wordmark}${titleBlock}${bottomBand}
   </section>`;
 }
@@ -617,11 +694,11 @@ function leadInBullets({ brand, items }) {
 // ── navy inset callout (ref pg 04 "We hire slow and hold the line") ──
 //  Blue right-edge accent (offset shadow), blue eyebrow, white headline, body.
 function navyCallout({ brand, eyebrow, headline, body }) {
-  const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
+  const ink = pageInk(brand).solid;   // AUDIT #2: callout fill = near-black, not #171758
   return `<div style="position:relative; margin:0 0 30px;">
     <div style="position:absolute; top:8px; left:8px; right:-8px; bottom:-8px; background:${blue}; border-radius:2px;"></div>
-    <div style="position:relative; background:${navy}; border-radius:2px; padding:26px 30px;">
+    <div style="position:relative; background:${ink}; border-radius:2px; padding:26px 30px;">
       ${eyebrow ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:${blue}; margin-bottom:10px;">${esc(eyebrow)}</div>` : ""}
       ${headline ? `<div style="font-size:21px; font-weight:700; line-height:1.25; color:#FFFFFF; margin-bottom:${body ? 12 : 0}px;">${esc(headline)}</div>` : ""}
       ${body ? `<div style="font-size:14px; line-height:1.6; color:rgba(255,255,255,0.72);">${esc(body)}</div>` : ""}
@@ -679,7 +756,7 @@ function scorecardNoSearchPage(brand, pageNo, pageTotal) {
       <tbody>${rows}</tbody>
     </table>
 
-    <div style="margin-top:30px; background:${navy}; border-radius:2px; padding:22px 26px; position:relative;">
+    <div style="margin-top:30px; background:${pageInk(brand).solid}; border-radius:2px; padding:22px 26px; position:relative;">
       <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:${blue};"></div>
       <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:${blue}; margin-bottom:8px;">What a Strong Outcome Looks Like</div>
       <div style="font-size:14px; line-height:1.6; color:#E8EDF2;">Outcomes must be <strong style="color:#fff;">Specific, Measurable, and Time-Bound</strong>. If you cannot measure it, it is not an outcome \u2014 it is a hope.</div>
@@ -703,4 +780,5 @@ module.exports = {
   numberedStageList, tocList, closingCtaPage,
   coverPage, leadInBullets, navyCallout,
   scorecardNoSearchPage,
+  pageInk, inkGradient, ringNest,
 };
