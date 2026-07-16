@@ -160,6 +160,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
     intro: "These are process metrics — they measure how well we run the system, not any one role. A healthy hiring discipline moves all of these in the right direction over time.",
     inner: P.metricTable({ brand: b,
       columns: ["Metric", "What It Measures", "Target"],
+      colWidths: ["215px", "auto", "150px"],
       rows: [
         ["Scorecard Coverage", "% of open roles with a completed scorecard before posting", "100%"],
         ["Process Adherence", "% of hires that completed every funnel stage with no skips", "100%"],
@@ -199,6 +200,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
     intro: "When a role opens, leadership conducts a Talent Bench Review before any external recruiting begins. Internal promotion is always the priority when quality allows.",
     inner: P.metricTable({ brand: b,
       columns: ["Bench Rating", "Definition", "Action Required"],
+      colWidths: ["150px", "auto", "230px"],
       rows: [
         ["Ready Now", "Can step into the role within 30 days with minimal ramp.", "Promote when the role opens. Keep engaged with stretch work."],
         ["Ready Next", "Could step in within 6–18 months with development support.", "Activate development plan. Review progress quarterly."],
@@ -328,6 +330,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
     intro: "All candidates — internal and external — are scored on the same matrix. Scores are assigned independently by each interviewer, then compared in the debrief. There is no single passing number: a weak category is a stop-and-discuss, and a strong Role Fit cannot paper over a Core Values miss.",
     inner: P.metricTable({ brand: b,
       columns: ["Category", "What We're Measuring", "Max", "Score"],
+      colWidths: ["165px", "auto", "62px", "88px"],
       rows: [
         ["Role Fit", "Skills, experience, and competencies match the scorecard.", "10", "__ / 10"],
         ["PI Alignment", "Behavioral profile aligns with the defined job target.", "10", "__ / 10"],
@@ -370,6 +373,7 @@ function buildPlaybookHTML({ ctx, brand, values }) {
       + `<div style="margin-top:28px; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:14px;">The 90-Day Review</div>`
       + P.metricTable({ brand: b,
           columns: ["Review Area", "What to Assess", "Outcome"],
+          colWidths: ["185px", "auto", "175px"],
           rows: [
             ["Performance vs. Scorecard", "Are the 90-day metrics being met? Where are the gaps?", "On Track / Needs Support / At Risk"],
             ["Core Value Alignment", "Is this person living the values? What does the team say?", "Strong / Developing / Concern"],

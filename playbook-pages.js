@@ -283,7 +283,7 @@ function coreValuePage({ brand, docTitle, value, idx, total, pageNo, pageTotal }
   const rubricBlock = rubricRows
     ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">Scoring Rubric</div>
        <table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default);">
-         <thead><tr style="background:var(--rac-off-white);">
+         <thead><tr style="background:#EFEAE0;">
            <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">Score</td>
            <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">What It Sounds Like</td>
          </tr></thead>
@@ -389,7 +389,7 @@ function threeBucketBlock({ brand, items, variant = "light" }) {
 //  header labels; rows[] are arrays aligned to columns. First cell of each row
 //  renders bold (the row label), matching the reference.
 // ════════════════════════════════════════════════════════════════════════
-function metricTable({ brand, columns, rows, darkRows }) {
+function metricTable({ brand, columns, rows, darkRows, colWidths }) {
   const blue = brand.blue || "#1F6FB2";
   const ink = pageInk(brand).solid;   // AUDIT #7: dark-row fill = near-black
   const cols = Array.isArray(columns) ? columns : [];
@@ -400,11 +400,26 @@ function metricTable({ brand, columns, rows, darkRows }) {
   // cell inked, white text, no blue edge (the P21 decision-matrix TOTAL row).
   // Default [] preserves every existing caller unchanged.
   const darkSet = new Set(Array.isArray(darkRows) ? darkRows : []);
+  // AUDIT #12: optional per-column widths (e.g. ["190px", "auto", "150px"]) so a
+  // caller can widen the label column and stop wrap drift ("Internal Promotion
+  // Rate", "Bench Rating", "Track & Improve"). Absent = browser auto (unchanged).
+  const widths = Array.isArray(colWidths) ? colWidths : [];
+  const w = (i) => widths[i] ? `width:${widths[i]};` : "";
+  // AUDIT #11: table treatments to match the reference —
+  //  • header band = BEIGE, not the grey --rac-off-white full band
+  //  • accent (last) column header = light-blue tint + blue text (kept)
+  //  • FIRST column body cells get a light tint (was missing)
+  const BEIGE = "#EFEAE0";                 // reference header beige
+  const FIRST_TINT = "rgba(31,111,178,0.035)"; // faint blue-grey first-col tint
+  const ACCENT_TINT = "rgba(31,111,178,0.06)";
 
-  const head = `<tr style="background:var(--rac-off-white);">
-    ${cols.map((c, i) =>
-      `<td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${i === lastIdx ? blue : "var(--text-muted)"}; ${i === lastIdx ? `background:rgba(31,111,178,0.06);` : ""}">${esc(c)}</td>`
-    ).join("")}
+  const head = `<tr>
+    ${cols.map((c, i) => {
+      const isLast = i === lastIdx;
+      const bg = isLast ? ACCENT_TINT : BEIGE;
+      const color = isLast ? blue : "var(--text-muted)";
+      return `<td style="padding:12px 18px; ${w(i)} font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${color}; background:${bg};">${esc(c)}</td>`;
+    }).join("")}
   </tr>`;
 
   const body = rws.map((r, ri) => {
@@ -413,7 +428,7 @@ function metricTable({ brand, columns, rows, darkRows }) {
       return `<tr style="border-top:1px solid var(--border-default); background:${ink};">
         ${cols.map((_, i) => {
           const val = r[i] == null ? "" : r[i];
-          return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:#FFFFFF; font-weight:700;">${esc(val)}</td>`;
+          return `<td style="padding:15px 18px; ${w(i)} vertical-align:top; font-size:13px; line-height:1.5; color:#FFFFFF; font-weight:700;">${esc(val)}</td>`;
         }).join("")}
       </tr>`;
     }
@@ -422,7 +437,8 @@ function metricTable({ brand, columns, rows, darkRows }) {
         const val = r[i] == null ? "" : r[i];
         const isFirst = i === 0;
         const isLast = i === lastIdx;
-        return `<td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:${isFirst ? "var(--text-strong)" : "var(--text-body)"}; font-weight:${isFirst ? 700 : (isLast ? 700 : 400)}; ${isLast ? `border-left:3px solid ${blue};` : ""}">${esc(val)}</td>`;
+        const cellBg = isFirst ? `background:${FIRST_TINT};` : "";
+        return `<td style="padding:15px 18px; ${w(i)} vertical-align:top; font-size:13px; line-height:1.5; color:${isFirst ? "var(--text-strong)" : "var(--text-body)"}; font-weight:${isFirst ? 700 : (isLast ? 700 : 400)}; ${cellBg} ${isLast ? `border-left:3px solid ${blue};` : ""}">${esc(val)}</td>`;
       }).join("")}
     </tr>`;
   }).join("");
@@ -444,14 +460,17 @@ function scoredRubricTable({ brand, values }) {
   const vals = Array.isArray(values) ? values.filter(Boolean) : [];
   if (!vals.length) return "";
 
-  const head = `<tr style="background:var(--rac-off-white);">
-    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); width:170px;">Core Value</td>
-    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">Behavioral Question</td>
-    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; background:rgba(31,111,178,0.06); width:96px;">Score</td>
+  const BEIGE = "#EFEAE0";
+  const FIRST_TINT = "rgba(31,111,178,0.035)";
+  const ACCENT_TINT = "rgba(31,111,178,0.06)";
+  const head = `<tr>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:${BEIGE}; width:170px;">Core Value</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:${BEIGE};">Behavioral Question</td>
+    <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; background:${ACCENT_TINT}; width:96px;">Score</td>
   </tr>`;
 
   const body = vals.map((v) => `<tr style="border-top:1px solid var(--border-default);">
-    <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13.5px; color:var(--text-strong);">${esc(v.name || "")}</td>
+    <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13.5px; color:var(--text-strong); background:${FIRST_TINT};">${esc(v.name || "")}</td>
     <td style="padding:15px 18px; vertical-align:top; font-size:13px; line-height:1.5; color:var(--text-body);">${esc(v.question || "")}</td>
     <td style="padding:15px 18px; vertical-align:top; font-weight:700; font-size:13px; color:var(--text-muted); border-left:3px solid ${blue}; white-space:nowrap;">5 / 3 / 1</td>
   </tr>`).join("");
@@ -745,7 +764,7 @@ function scorecardNoSearchPage(brand, pageNo, pageTotal) {
 
   const rows = SCORECARD_ROWS.map((r, i) => `
     <tr style="border-top:1px solid var(--border-default);">
-      <td style="padding:16px 18px; vertical-align:top; font-weight:700; font-size:13px; color:var(--text-strong); width:150px;">${esc(r.c)}</td>
+      <td style="padding:16px 18px; vertical-align:top; font-weight:700; font-size:13px; color:var(--text-strong); background:rgba(31,111,178,0.035); width:150px;">${esc(r.c)}</td>
       <td style="padding:16px 18px; vertical-align:top; font-style:italic; font-size:13px; line-height:1.5; color:var(--text-muted); width:230px;">${esc(r.weak)}</td>
       <td style="padding:16px 18px; vertical-align:top; font-weight:700; font-size:13px; line-height:1.5; color:var(--text-strong); background:rgba(31,111,178,0.05);">${esc(r.strong)}</td>
     </tr>`).join("");
@@ -764,7 +783,7 @@ function scorecardNoSearchPage(brand, pageNo, pageTotal) {
     <div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">Role Scorecard Template</div>
     <table style="width:100%; border-collapse:collapse; border:1px solid var(--border-default); font-size:13px;">
       <thead>
-        <tr style="background:var(--rac-off-white);">
+        <tr style="background:#EFEAE0;">
           <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">Component</td>
           <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted);">What Weak Looks Like</td>
           <td style="padding:12px 18px; font-weight:700; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; background:rgba(31,111,178,0.08);">What Strong Looks Like</td>
