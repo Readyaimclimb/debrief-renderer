@@ -167,11 +167,33 @@ function sectionOpenerPage({
                 stroke="rgba(150,175,200,0.10)" stroke-width="1.2" fill="none"/>
     </svg>`;
 
-  // top bar: mini mountain-mark + section title (left) · section counter (right)
-  const mark = `
-    <span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:${blue}; margin-right:14px; vertical-align:middle;">
+  // top bar: client mark + section title (left) · Powered-by-Trueseat + counter (right)
+  const so_logos = (brand && brand.logos) || {};
+
+  // LEFT mark — real small client logo (dark-page art) if available, else the
+  // original drawn mountain-in-circle.
+  const mark = so_logos.clientDark
+    ? `<img src="${so_logos.clientDark}" alt="${esc(brand.clientName || "")}" style="height:30px; width:auto; margin-right:14px; vertical-align:middle; display:inline-block;">`
+    : `<span style="display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:${blue}; margin-right:14px; vertical-align:middle;">
       <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><path d="M1 11 L5 3 L7 6 L9 1 L13 11 Z" fill="#FFFFFF"/></svg>
     </span>`;
+
+  // RIGHT — "POWERED BY Trueseat" lockup (real image when present) sitting above
+  // the section counter, matching the reference header.
+  const counter = sectionNum && sectionTotal
+    ? `<span style="font-size:13px; font-weight:700; letter-spacing:0.08em; color:${blue};">${String(sectionNum).padStart(2, "0")} / ${String(sectionTotal).padStart(2, "0")}</span>`
+    : "";
+  const soPoweredBy = so_logos.trueseat
+    ? `<div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+         <div style="display:flex; align-items:center; gap:8px;">
+           <span style="font-size:8px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.4);">Powered by</span>
+           <img src="${so_logos.trueseat}" alt="Trueseat" style="height:16px; display:inline-block;">
+         </div>
+         ${counter}
+       </div>`
+    : `<div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+         ${counter}
+       </div>`;
 
   const topBar = `
     <div style="position:absolute; top:60px; left:64px; right:64px; display:flex; justify-content:space-between; align-items:center;">
@@ -179,9 +201,7 @@ function sectionOpenerPage({
         ${mark}
         <span style="font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.55);">${esc(sectionTitle)}</span>
       </div>
-      ${sectionNum && sectionTotal
-        ? `<span style="font-size:13px; font-weight:700; letter-spacing:0.08em; color:${blue};">${String(sectionNum).padStart(2, "0")} / ${String(sectionTotal).padStart(2, "0")}</span>`
-        : ""}
+      ${soPoweredBy}
     </div>`;
 
   // headline block — AUDIT #4: cap-glyph ≈ 40px (was 48px rendered at 64px font,
@@ -592,18 +612,33 @@ function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ct
     ? `<span style="font-size:13px; color:rgba(255,255,255,0.5); margin-left:18px;">${esc(ctaUrl.replace(/^https?:\/\//, ""))}</span>`
     : "";
 
-  // permanent base-brand partnership lockup (cannot be themed off)
+  // permanent base-brand partnership lockup (cannot be themed off).
+  // Real Trueseat + RAC logo art when the sidecar files are present; each half
+  // independently falls back to its text version if its image is missing.
+  const bcLogos = (brand && brand.logos) || {};
+  const tsBlock = bcLogos.trueseat
+    ? `<div>
+         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:9px;">Powered by</div>
+         <img src="${bcLogos.trueseat}" alt="Trueseat" style="height:24px; display:block;">
+       </div>`
+    : `<div>
+         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">Powered by</div>
+         <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Trueseat</div>
+       </div>`;
+  const racBlock = bcLogos.rac
+    ? `<div>
+         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:9px;">In partnership with</div>
+         <img src="${bcLogos.rac}" alt="Ready Aim Climb" style="height:38px; display:block;">
+       </div>`
+    : `<div>
+         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">In partnership with</div>
+         <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Ready Aim Climb</div>
+       </div>`;
   const lockup = `
     <div style="position:absolute; left:64px; right:64px; bottom:44px; display:flex; justify-content:space-between; align-items:flex-end;">
-      <div style="display:flex; align-items:center; gap:34px;">
-        <div>
-          <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">Powered by</div>
-          <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Trueseat</div>
-        </div>
-        <div>
-          <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">In partnership with</div>
-          <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Ready Aim Climb</div>
-        </div>
+      <div style="display:flex; align-items:center; gap:40px;">
+        ${tsBlock}
+        ${racBlock}
       </div>
       <div style="text-align:right; font-size:10px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); line-height:1.6;">
         &copy; 2026 ${esc(brand.clientName || "")}<br>${esc(docTitle || "")} &middot; Confidential
@@ -654,21 +689,34 @@ function coverPage({ brand, eyebrow, title, subtitle, tagline, url }) {
                 stroke="${mtnStroke}" stroke-width="1.2" fill="none"/>
     </svg>`;
 
-  // logo mark: gear-ring + mountain (matches SUMMIT mark spirit; brand-driven)
-  const mark = `
+  const logos = (brand && brand.logos) || {};
+
+  // drawn gear/mountain mark — the ORIGINAL fallback, used only when the tenant
+  // has no real logo art on file.
+  const drawnMark = `
     <span style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:${blue}; margin-bottom:22px;">
       <svg width="32" height="26" viewBox="0 0 32 26" fill="none"><path d="M3 24 L12 7 L16 14 L20 3 L29 24 Z" fill="#FFFFFF"/></svg>
     </span>`;
 
-  const poweredBy = `
-    <div style="position:absolute; top:60px; right:64px; text-align:right;">
-      <div style="font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.42); margin-bottom:6px;">Powered by</div>
-      <div style="font-size:15px; font-weight:700; color:rgba(255,255,255,0.9);">Trueseat</div>
-    </div>`;
+  // POWERED BY — real Trueseat lockup image if available, else the text version.
+  const poweredBy = logos.trueseat
+    ? `<div style="position:absolute; top:60px; right:64px; text-align:right;">
+         <div style="font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.42); margin-bottom:10px;">Powered by</div>
+         <img src="${logos.trueseat}" alt="Trueseat" style="height:30px; display:inline-block;">
+       </div>`
+    : `<div style="position:absolute; top:60px; right:64px; text-align:right;">
+         <div style="font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.42); margin-bottom:6px;">Powered by</div>
+         <div style="font-size:15px; font-weight:700; color:rgba(255,255,255,0.9);">Trueseat</div>
+       </div>`;
 
-  const wordmark = `
-    <div style="position:absolute; top:60px; left:64px;">
-      ${mark}
+  // CLIENT LOCKUP upper-left — real client logo (dark-page art) if available,
+  // else the drawn mark + typeset wordmark (original behaviour, untouched).
+  const wordmark = logos.clientDark
+    ? `<div style="position:absolute; top:60px; left:64px;">
+         <img src="${logos.clientDark}" alt="${esc(brand.clientName || "")}" style="width:210px; max-height:230px; object-fit:contain; display:block;">
+       </div>`
+    : `<div style="position:absolute; top:60px; left:64px;">
+      ${drawnMark}
       <div style="font-size:30px; font-weight:800; letter-spacing:0.18em; color:#FFFFFF; line-height:1;">${esc((brand.clientName || "").split(" ")[0].toUpperCase() || "")}</div>
       ${brand.clientName && brand.clientName.split(" ").length > 1
         ? `<div style="font-size:15px; font-weight:700; letter-spacing:0.28em; color:${blue}; margin-top:6px;">${esc(brand.clientName.split(" ").slice(1).join(" ").toUpperCase())}</div>`

@@ -36,11 +36,59 @@
 //  the "N of N" counters shift accordingly — footers for pages AFTER the value
 //  block are recomputed from the actual value count, never hard-coded.
 // ════════════════════════════════════════════════════════════════════════
+const fs = require("fs");
+const path = require("path");
 const T = require("./deliverable-tokens.js");
 const E = require("./debrief-engine.js"); // DS_TOKENS only (light palette)
 const P = require("./playbook-pages.js");
 
 const DOC = "Hiring & Talent Development Playbook";
+
+// ── logo loader ──────────────────────────────────────────────────────────
+//  Brand marks are stored as base64 .txt sidecar files (same pattern as the
+//  existing cdlogo_dark_t.png.txt). loadLogo reads one and returns a ready
+//  data: URI, or "" if the file is missing — callers treat "" as "fall back
+//  to the text/SVG wordmark", so a missing file NEVER breaks a render.
+//  Loaded ONCE per build (module-cached by the OS/page cache anyway).
+function loadLogo(file) {
+  try {
+    const b64 = fs.readFileSync(path.join(__dirname, file), "utf8").trim();
+    return b64 ? "data:image/png;base64," + b64 : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// Fixed base-brand marks — identical on EVERY tenant's playbook (Trueseat is the
+// product, RAC is the partner). These are not themeable and not per-client.
+const BRAND_LOGOS = {
+  trueseat:     loadLogo("trueseat-logo.txt"),   // full "▢ Trueseat" lockup (reversed, for dark)
+  trueseatMark: loadLogo("trueseat-mark.txt"),   // compact chair mark only
+  rac:          loadLogo("rac-logo.txt"),        // Ready Aim Climb mountain (white knocked out)
+};
+
+// Per-client logo resolver. A real client passes brand.branding.logo (light-bg
+// art) and brand.branding.logoDark (art tuned for dark pages) as base64 data
+// URIs from the app, EXACTLY as Contractor Dynamics already does. For the built
+// -in demo tenants that have sidecar files in this repo, we also fall back to a
+// named .txt so the Summit proof renders its real mark with no app round-trip.
+// Resolution order: explicit brand.branding.* → named demo sidecar → "".
+function resolveClientLogos(brand) {
+  const bd = (brand && brand.branding) || {};
+  const norm = (v) => {
+    const s = String(v || "").trim();
+    if (!s) return "";
+    return /^data:/i.test(s) ? s : "data:image/png;base64," + s;
+  };
+  // demo sidecars keyed by client code (only present for seeded demo tenants)
+  const code = String((brand && brand.code) || "").toLowerCase();
+  const demoLight = { "summit-2026": "summit-light.txt" }[code] || "";
+  const demoDark  = { "summit-2026": "summit-dark.txt"  }[code] || "";
+  return {
+    light: norm(bd.logo)     || loadLogo(demoLight),
+    dark:  norm(bd.logoDark) || loadLogo(demoDark) || norm(bd.logo) || loadLogo(demoLight),
+  };
+}
 
 // numberWord — spell a small count as a word for body prose ("three values"),
 // matching the reference. Falls back to the numeral above 12. Used where the
@@ -52,10 +100,21 @@ function numberWord(n) {
 }
 
 function buildPlaybookHTML({ ctx, brand, values }) {
+  const clientLogos = resolveClientLogos(brand);
   const b = {
     clientName: (brand && brand.clientName) || (ctx && ctx.company) || "Summit Mechanical",
     navy: (brand && brand.navy) || "#16242E",
     blue: (brand && brand.blue) || "#1F6FB2",
+    // logos: fixed base-brand marks + the resolved per-client mark. Pages read
+    // these off `brand`; any that are "" fall back to the prior text/SVG wordmark
+    // so nothing ever renders blank.
+    logos: {
+      trueseat:     BRAND_LOGOS.trueseat,
+      trueseatMark: BRAND_LOGOS.trueseatMark,
+      rac:          BRAND_LOGOS.rac,
+      clientLight:  clientLogos.light,
+      clientDark:   clientLogos.dark,
+    },
   };
   // shortName — the CONVERSATIONAL name used in body prose ("Summit's own core
   // values", "all Summit core values"), matching how the reference deck reads.
