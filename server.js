@@ -401,15 +401,32 @@ app.get("/culture-proof", async (req, res) => {
         anchor4: "Names teammates in wins without prompting; executed the opposed decision fully and says why that mattered.",
       },
     ];
-    const html = buildCultureHTML({
-      ctx: { company: "Summit Mechanical" },
-      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
-      values: PROOF_STORED_VALUES,
-      culture: {
+    // Read Summit's REAL enriched record from clients.js (ESM → dynamic import
+    // from CommonJS) so the proof renders the live data — verbatim ladders,
+    // manager tips, coaching scripts, multi-hiring, acronym field — exactly what
+    // the authed route will feed. Previously this route inlined a thin stub,
+    // which is why enriched clients.js changes didn't surface. Falls back to the
+    // inline stub only if the import/lookup fails, so the route never hard-errors.
+    let proofValues, proofCulture;
+    try {
+      const clientsMod = await import("./clients.js");
+      const summit = clientsMod.getClient("summit-2026");
+      proofValues = summit.values;
+      proofCulture = summit.culture;
+    } catch (e) {
+      console.error("culture-proof: clients.js load failed, using inline stub:", e && e.message);
+      proofValues = PROOF_STORED_VALUES;
+      proofCulture = {
         acronym: null,
         purpose: "To hold a standard most companies only talk about \u2014 in every install, every service call, every conversation between teammates.",
         mission: "At Summit Mechanical, commitments mean something and execution is a discipline, not a hope. We build heating, cooling, and controls systems that last \u2014 and a team that lasts alongside them.",
-      },
+      };
+    }
+    const html = buildCultureHTML({
+      ctx: { company: "Summit Mechanical" },
+      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
+      values: proofValues,
+      culture: proofCulture,
     });
     const browser = await getBrowser();
     const page = await browser.newPage();
