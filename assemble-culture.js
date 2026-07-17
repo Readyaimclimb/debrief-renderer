@@ -144,14 +144,15 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
   const pages = [];
   const push = (html) => pages.push(html);
 
-  // Brand-standard page map (Culture_Codifed_Brand_Standard.pdf): 16 counted
-  // interior pages for a 3-value tenant, cover + back cover uncounted. TOC is
-  // counted page 01. Value-driven blocks: behavior ladders (one page/value) +
-  // ONE combined hiring page (all values as stacked cards). So the counted
-  // total scales by ONE per value beyond 3 (ladders), the hiring page is fixed.
-  // PT recomputed here to the brand-standard baseline (overrides the value set
-  // above, which was the old doubled model).
-  const PT16 = 16 + (renderedValuePages - 3);
+  // Brand-standard page map, extended: 17 counted interior pages for a 3-value
+  // tenant (the T&C-depth rotation with labeled sub-steps + manager prompts
+  // needs TWO pages — Weeks 1-2 and Weeks 3-4 — exactly as the T&C reference
+  // spreads it). Cover + back cover uncounted. Counted total scales by ONE per
+  // value beyond the ladders' baseline. TOC page numbers below are computed
+  // from R = renderedValuePages so they always match actual render positions
+  // (fixes a prior off-by-one where TOC arithmetic drifted from the counter).
+  const R = renderedValuePages;
+  const PT16 = 14 + R; // 3 values → 17 counted
 
   // ── phys 01: COVER (no counter) ──
   push(P.coverPage({
@@ -163,21 +164,21 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     tagline, url,
   }));
 
-  // ── phys 02: TABLE OF CONTENTS (footer 01 / 16) ──
+  // ── phys 02: TABLE OF CONTENTS (footer 01) ──
   push(P.lightContentPage({
     brand: b, docTitle: DOC, eyebrow: "Inside This Playbook", title: "Table of Contents",
     inner: P.tocList({ brand: b, entries: [
       { n: "\u25B2", title: "Our Foundation — People Are the Product", desc: "The purpose and mission every core value serves.", page: 2 },
       { n: 1, title: "What This Playbook Is", desc: "How we protect the culture as we grow.", page: 3 },
       { n: 2, title: "Core Values Defined", desc: "Each value, with clear A-Player, Meets, and Unacceptable behavior.", page: 4 },
-      { n: 3, title: "Weekly System", desc: "The 4-week rotation for huddles and team meetings.", page: 4 + vCount },
-      { n: 4, title: "Scorecard System", desc: "Rate culture, not just output.", page: 5 + vCount },
-      { n: 5, title: "Coaching & Accountability", desc: "Coach the behavior, not the person.", page: 6 + vCount },
-      { n: 6, title: "Hiring for Core Values", desc: "Never hire someone who fails the values screen.", page: 8 + vCount },
-      { n: 7, title: "People Decisions", desc: "Values are hard gates.", page: 9 + vCount },
-      { n: 8, title: "Field Execution", desc: "How the values become daily life.", page: 10 + vCount },
-      { n: 9, title: "Manager Expectations", desc: "Not HR's job. Not the owner's job. Yours.", page: 11 + vCount },
-      { n: "\u2022", title: "The Standard Is Set", desc: numberWord(vCount || 3).replace(/^\w/, c => c.toUpperCase()) + " values. One standard. Every seat, every day.", page: 12 + vCount },
+      { n: 3, title: "Weekly System", desc: "The 4-week rotation for huddles and team meetings.", page: 5 + R },
+      { n: 4, title: "Scorecard System", desc: "Rate culture, not just output.", page: 7 + R },
+      { n: 5, title: "Coaching & Accountability", desc: "Coach the behavior, not the person.", page: 8 + R },
+      { n: 6, title: "Hiring for Core Values", desc: "Never hire someone who fails the values screen.", page: 10 + R },
+      { n: 7, title: "People Decisions", desc: "Values are hard gates.", page: 11 + R },
+      { n: 8, title: "Field Execution", desc: "How the values become daily life.", page: 12 + R },
+      { n: 9, title: "Manager Expectations", desc: "Not HR's job. Not the owner's job. Yours.", page: 13 + R },
+      { n: "\u2022", title: "The Standard Is Set", desc: numberWord(vCount || 3).replace(/^\w/, c => c.toUpperCase()) + " values. One standard. Every seat, every day.", page: 14 + R },
     ] }),
     pageNo: 1, pageTotal: PT16,
   }));
@@ -217,7 +218,8 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
           { lead: "", body: "Ensure our culture stays strong as we grow." },
         ] })
       + `<div style="margin:20px 0 26px; border-left:4px solid ${b.blue}; padding:4px 0 4px 18px; font-size:15px; font-weight:700; line-height:1.45; color:var(--text-strong); max-width:700px;">This is not optional. Culture is not a feel-good extra — it is how we operate. Every manager is responsible for bringing these values to life.</div>`
-      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">The Manager's Role</div>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 10px;">The Manager's Role</div>`
+      + `<p style="margin:0 0 16px; font-size:13.5px; line-height:1.6; color:var(--text-body); max-width:700px;">Culture is built in the field, in one-on-ones, and in the way a manager responds when a mistake happens — or when someone goes above and beyond. As a manager at ${P.esc(shortName)}, you are the culture. Own it.</p>`
       + P.threeBucketBlock({ brand: b, items:
           (Array.isArray(cult.managerRoles) && cult.managerRoles.length
             ? cult.managerRoles
@@ -266,15 +268,49 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     });
   }
 
-  // ── 03 · WEEKLY SYSTEM — Consistency Is the Goal (4-week rotation, verbatim) ──
+  // ── 03 · WEEKLY SYSTEM — two pages (Weeks 1-2, Weeks 3-4), T&C depth ──
+  //  Each week is a labeled four-step WORKFLOW (the sub-steps are the tap-through
+  //  checklist when this becomes software) + a scripted Manager Prompt. The
+  //  sub-step labels are fixed Trueseat methodology; examples interpolate the
+  //  tenant's own value names. Two pages because four weeks at this depth
+  //  cannot fit one — matches the T&C reference layout.
+  const wk = (i) => (cult.rotationPrompts || [])[i];
+  const v1name = (vals[0] && vals[0].name) || "our first value";
   push(P.lightContentPage({
     brand: b, docTitle: DOC, eyebrow: "03 · Weekly System · 4-Week Rotation", title: "Consistency Is the Goal.",
     intro: "Run this system in your weekly team meetings or job huddles. Each format takes 5–10 minutes maximum. Rotate through all four each month, every month, without exception.",
     inner: P.numberedStageList({ brand: b, items: [
-      { title: "Caught in the Act", tag: "Recognition", body: "Name someone who clearly lived a value this week. Be specific: what they did, when, where, and why it mattered. Tie it to the value by name. Say out loud: \u201cThis is the standard. This is who we are.\u201d", prompt: (cult.rotationPrompts || [])[0] },
-      { title: "Anti-Value", tag: "Accountability", body: "Describe a behavior where a value was NOT followed (no names if it's ongoing). Name which value was missed and what it looked like. Describe exactly what should have happened. Restate the expectation going forward.", prompt: (cult.rotationPrompts || [])[1] },
-      { title: "Under Pressure", tag: "Scenario Training", body: "Give a real scenario from a recent job or customer call. Ask: \u201cWhat does this value look like here? What does the A-Player do?\u201d Build the answer together. Lock in the standard response.", prompt: (cult.rotationPrompts || [])[2] },
-      { title: "Raise the Bar", tag: "A-Player Definition", body: "Pick one value for the week. Walk through A-Player, Meets, and Unacceptable. Ask: \u201cWhere are we as a team right now? Where do we want to be?\u201d Commit to one specific behavior to improve before next month.", prompt: (cult.rotationPrompts || [])[3] },
+      { title: "Caught in the Act", tag: "Week 1 · Recognition", prompt: wk(0), substeps: [
+        { label: "Identify", text: "Name someone who clearly lived a value this week." },
+        { label: "Describe", text: "Be specific: what did they do, when, where, and why it mattered." },
+        { label: "Connect", text: "Tie it to the value by name: \u201cThat is exactly what " + v1name + " looks like.\u201d" },
+        { label: "Reinforce", text: "Say out loud: \u201cThis is the standard. This is who we are.\u201d" },
+      ] },
+      { title: "Anti-Value", tag: "Week 2 · Accountability", prompt: wk(1), substeps: [
+        { label: "Identify", text: "Describe a behavior where a value was NOT followed (no names if it's ongoing)." },
+        { label: "Name It", text: "State which value was missed and what it looked like." },
+        { label: "Reset", text: "Describe exactly what should have happened instead." },
+        { label: "Close", text: "Restate the expectation: \u201cGoing forward, here is what we need.\u201d" },
+      ] },
+    ] }),
+    pageNo: counter, pageTotal: PT16,
+  }));
+  counter += 1;
+  push(P.lightContentPage({
+    brand: b, docTitle: DOC, eyebrow: "03 · Weekly System · 4-Week Rotation", title: "Weeks Three and Four.",
+    inner: P.numberedStageList({ brand: b, startAt: 3, items: [
+      { title: "Under Pressure", tag: "Week 3 · Scenario Training", prompt: wk(2), substeps: [
+        { label: "Present", text: "Give a real scenario from a recent job or customer call." },
+        { label: "Ask", text: "\u201cWhat does this value look like here? What does the A-Player do?\u201d" },
+        { label: "Discuss", text: "Let the team respond — build the answer together." },
+        { label: "Lock In", text: "Agree on the standard response: \u201cWhen this happens, we do this.\u201d" },
+      ] },
+      { title: "Raise the Bar", tag: "Week 4 · A-Player Definition", prompt: wk(3), substeps: [
+        { label: "Pick", text: "Choose one value for the week." },
+        { label: "Define", text: "Walk through A-Player, Meets Standard, and Unacceptable behavior." },
+        { label: "Ask", text: "\u201cWhere are we as a team right now? Where do we want to be?\u201d" },
+        { label: "Commit", text: "Set one specific behavior to improve before next month." },
+      ] },
     ] }),
     pageNo: counter, pageTotal: PT16,
   }));
@@ -364,7 +400,7 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
   // ── 07 · PEOPLE DECISIONS — Values Are Hard Gates (5/3/1 tied gates) ──
   push(P.lightContentPage({
     brand: b, docTitle: DOC, eyebrow: "07 · People Decisions", title: "Values Are Hard Gates.",
-    intro: "Our values are not soft criteria. They are hard gates on every people decision we make. A promotion is a statement that this person represents " + shortName + " at a higher level.",
+    intro: "Our values are not soft criteria. They are hard gates on every people decision we make. A promotion is a statement that this person represents " + shortName + " at a higher level. You cannot promote someone who does not demonstrate A-Player behavior in our values.",
     inner:
       `<div style="margin:0 0 26px; border-left:4px solid ${b.blue}; padding:4px 0 4px 18px;">`
         + `<div style="font-size:20px; font-weight:700; line-height:1.3; color:var(--text-strong);">\u201cTechnical skill earns compensation. Character earns leadership.\u201d</div>`
@@ -389,11 +425,11 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     brand: b, docTitle: DOC, eyebrow: "08 · Field Execution", title: "How the Values Become Daily Life.",
     intro: "Here is how the values become part of daily life — from the field to the office to every customer interaction.",
     inner: P.leadInBullets({ brand: b, items: [
-      { lead: "In every vehicle.", body: "Keep the values one-pager in every service vehicle. Reference it when coaching in the field." },
-      { lead: "In onboarding.", body: "Every new hire completes a values orientation in week one — they can name all " + numberWord(vCount || 3) + " and give a real example of each." },
-      { lead: "In weekly huddles.", body: "Run the 4-week rotation (Section 03) every week without exception. 5–10 minutes. Non-negotiable." },
-      { lead: "In daily conversation.", body: "Use the language. Call values out by name: \u201cThat's " + ((vals[0] && vals[0].name) || "our value") + ".\u201d The more it's said, the more it's real." },
-      { lead: "In customer interactions.", body: "When someone goes above and beyond, name the value out loud. Make it visible and celebrated." },
+      { lead: "In every vehicle.", body: "Keep the values one-pager in every service vehicle. Reference it when coaching in the field — it should feel as natural as checking the equipment list." },
+      { lead: "In onboarding.", body: "Every new hire completes a values orientation in week one. By the end of the week they can name all " + numberWord(vCount || 3) + " and give a real example of each." },
+      { lead: "In weekly huddles.", body: "Run the 4-week rotation (Section 03) every single week without exception. 5–10 minutes. Non-negotiable." },
+      { lead: "In daily conversation.", body: "Use the language. Call values out by name: \u201cThat's " + ((vals[0] && vals[0].name) || "our value") + ".\u201d \u201cThat's what " + ((vals[1] && vals[1].name) || (vals[0] && vals[0].name) || "our value") + " looks like.\u201d The more it's said, the more it's real." },
+      { lead: "In customer interactions.", body: "When someone goes above and beyond, name the value out loud: \u201cYou just lived " + ((vals[0] && vals[0].name) || "our value") + ".\u201d Make it visible and celebrated." },
       { lead: "In performance reviews.", body: "The scorecard (Section 04) is a required part of every formal review. Behavior carries equal weight to output." },
     ] }),
     pageNo: counter, pageTotal: PT16,
