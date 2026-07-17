@@ -26,6 +26,7 @@ const { buildDefinitionHTML } = require("./definition-engine.js");
 const { buildJobAdHTML } = require("./jobad-engine.js");
 const { buildOneSheetHTML } = require("./assemble-onesheet.js");
 const { buildPlaybookHTML } = require("./assemble-playbook.js"); // PROOF: one-page Arimo font test — remove with its route after verifying
+const { buildCultureHTML } = require("./assemble-culture.js"); // Culture Codified deck — /culture-proof now; authed route at collapse
 const { extractDominantColors } = require("./sampler.js");
 
 const app = express();
@@ -350,6 +351,78 @@ app.get("/playbook-proof", async (req, res) => {
     res.status(200).end(pdfBuffer);
   } catch (err) {
     console.error("playbook-proof error:", err);
+    res.status(500).json({ error: "proof failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /culture-proof ───────────────────────────────────────────────────────
+//  TEMPORARY full-deck proof for Culture Codified. THROWAWAY like
+//  /playbook-proof — no auth, GET so it opens in a browser; both proofs
+//  collapse into authed routes together. Deliberately feeds Summit's values in
+//  the STORED clients.js shape (name/definition/behaviors/question/anchor1/
+//  anchor4 — NOT the enriched standards/hiringQuestions shape), because that
+//  is what a real tenant's record carries today: this proves the assembler's
+//  defensive adapter derives the ladder + hiring pages from live-shaped data.
+//  culture {purpose, mission} mirrors the seeded summit-2026 client record.
+app.get("/culture-proof", async (req, res) => {
+  try {
+    const PROOF_STORED_VALUES = [
+      {
+        name: "Extreme Ownership",
+        definition: "We own outcomes, not excuses. When something fails on our watch, we fix it and we say so.",
+        behaviors: [
+          "Describes failures in first person, without blaming circumstances or predecessors",
+          "Names what they changed after a failure \u2014 not just what went wrong",
+        ],
+        question: "Tell me about a time something failed and it was your fault. What happened next?",
+        anchor1: "Blames the team, the market, or the boss. \u201cFailure\u201d story is really a story about other people.",
+        anchor4: "Unprompted ownership, names the cost, and describes the specific system or habit they changed afterward.",
+      },
+      {
+        name: "Do What You Say",
+        definition: "Commitments are sacred. We close every loop \u2014 or renegotiate it out loud before the deadline.",
+        behaviors: [
+          "Gives examples of keeping commitments at personal cost",
+          "Renegotiates proactively rather than going quiet when a commitment is at risk",
+        ],
+        question: "Tell me about a commitment you realized you couldn't keep. What did you do, and when?",
+        anchor1: "Went quiet, hoped nobody noticed, or reframes the miss as someone else's misunderstanding.",
+        anchor4: "Flagged it early, renegotiated openly, and can name what it cost them to do so.",
+      },
+      {
+        name: "We Before Me",
+        definition: "The team's win outranks personal credit. We share information, share credit, and back decisions we argued against.",
+        behaviors: [
+          "Credits others by name when describing wins",
+          "Supports majority decisions they personally opposed",
+        ],
+        question: "Tell me about a decision you argued hard against \u2014 and lost. What did you do after?",
+        anchor1: "Wins are \u201cI,\u201d failures are \u201cthey.\u201d Undermined or slow-walked decisions they disagreed with.",
+        anchor4: "Names teammates in wins without prompting; executed the opposed decision fully and says why that mattered.",
+      },
+    ];
+    const html = buildCultureHTML({
+      ctx: { company: "Summit Mechanical" },
+      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
+      values: PROOF_STORED_VALUES,
+      culture: {
+        acronym: null,
+        purpose: "To hold a standard most companies only talk about \u2014 in every install, every service call, every conversation between teammates.",
+        mission: "At Summit Mechanical, commitments mean something and execution is a discipline, not a hope. We build heating, cooling, and controls systems that last \u2014 and a team that lasts alongside them.",
+      },
+    });
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="culture-proof.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("culture-proof error:", err);
     res.status(500).json({ error: "proof failed", detail: String(err && err.message || err) });
   }
 });

@@ -102,7 +102,12 @@ function adaptValue(v) {
   return out;
 }
 
-function buildCultureHTML({ ctx, brand, values }) {
+function buildCultureHTML({ ctx, brand, values, culture }) {
+  // culture — client-level identity fields { acronym, purpose, mission } from
+  // clients.js (the `culture` allowlist field). Optional: every read below has
+  // a white-label-safe generic fallback, so a tenant that hasn't set them still
+  // renders a complete page — in Trueseat voice, never another tenant's prose.
+  const cult = (culture && typeof culture === "object") ? culture : {};
   const b = {
     clientName: (brand && brand.clientName) || (ctx && ctx.company) || "Summit Mechanical",
     navy: (brand && brand.navy) || "#16242E",
@@ -159,12 +164,21 @@ function buildCultureHTML({ ctx, brand, values }) {
   }));
 
   // ── phys 03: Purpose / Mission / Core Values (footer 02 / 24) ──
+  //  Purpose + mission read from the tenant's `culture` field. WHITE-LABEL: the
+  //  fallbacks are generic Trueseat-voice lines — the previous hardcoded Summit
+  //  HVAC mission prose was a cross-tenant leak (any client without a mission
+  //  would have rendered Summit's). Purpose block only renders when set.
   push(P.lightContentPage({
     brand: b, docTitle: DOC, eyebrow: "Our Foundation", title: "Why We Exist.",
     intro: "At " + b.clientName + " we hold a standard most companies only talk about. Commitments mean something here, and execution is a discipline, not a hope.",
     inner:
-      P.navyCallout({ brand: b, eyebrow: "Our Mission", headline: "The work, and who does it.",
-        body: "To keep our community comfortable and safe through heating, cooling, and controls done right the first time — delivered by a team that takes ownership, keeps its word, and puts the crew before the individual." })
+      (cult.purpose
+        ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 10px;">Our Purpose</div>`
+          + `<p style="margin:0 0 24px; font-size:14.5px; line-height:1.6; color:var(--text-body); max-width:690px;">${P.esc(cult.purpose)}</p>`
+        : "")
+      + P.navyCallout({ brand: b, eyebrow: "Our Mission", headline: "The work, and who does it.",
+        body: cult.mission
+          || ("To do the work right the first time — delivered by a " + b.clientName + " team that takes ownership, keeps its word, and puts the team before the individual.") })
       + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">Our Core Values</div>`
       + P.behaviorLadderCoreList({ brand: b, values: vals }),
     pageNo: 2, pageTotal: PT,
