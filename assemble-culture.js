@@ -49,6 +49,59 @@ function numberWord(n) {
   return (n >= 0 && n <= 12) ? W[n] : String(n);
 }
 
+// ── defensive value adapter ─────────────────────────────────────────────
+//  clients.js stores values in the interview-scoring shape: { name, definition,
+//  behaviors[], question, anchor1, anchor4 }. This deck's richer fields —
+//  phrase, standards{aPlayer,meets,unacceptable}, hiringQuestions[] — land
+//  later via the onboarding expander (schema step 2 of the Culture feature
+//  arc). Until a value carries them, this adapter DERIVES them from the stored
+//  shape so the deck renders complete from live tenant data today, and
+//  upgrades automatically the moment richer fields exist. Rules:
+//    • explicit fields ALWAYS win — derivation only fills gaps
+//    • pure function, no mutation of the caller's object
+//    • a value with neither shape degrades exactly as before (primitives
+//      already render "" / skip empty rows — nothing new breaks)
+function adaptValue(v) {
+  if (!v) return v;
+  const out = { ...v };
+
+  // phrase — the punchy defining line. Derived as the FIRST SENTENCE of the
+  // stored definition; the remainder becomes the description so the ladder-
+  // page intro ("phrase" + definition) never repeats the first sentence.
+  // This reproduces the reference deck's split exactly ("The team's win
+  // outranks personal credit." + the rest as body).
+  if (!out.phrase && out.definition) {
+    const full = String(out.definition).trim();
+    const m = /^(.+?[.!?])\s+(\S[\s\S]*)$/.exec(full);
+    if (m) { out.phrase = m[1]; out.definition = m[2]; }
+    else { out.phrase = full; out.definition = ""; }
+  }
+
+  // standards ladder — anchor4 (the top scoring anchor) IS the A-Player
+  // behavior, behaviors[] are the meets-standard observables, anchor1 (the
+  // bottom anchor) IS the floor. Sparser than expander-authored ladders
+  // (one rung line vs four) but truthful to captured data.
+  if (!out.standards) {
+    const aPlayer = out.anchor4 ? [out.anchor4] : [];
+    const meets = Array.isArray(out.behaviors) ? out.behaviors.filter(Boolean) : [];
+    const unacceptable = out.anchor1 ? [out.anchor1] : [];
+    if (aPlayer.length || meets.length || unacceptable.length) {
+      out.standards = { aPlayer, meets, unacceptable };
+    }
+  }
+
+  // hiring questions — the stored interview question; listen-for prefers
+  // anchor4 (what a great answer sounds like — this is literally how the
+  // reference deck's Listen For lines read), falling back to behaviors[].
+  if (!Array.isArray(out.hiringQuestions) || !out.hiringQuestions.length) {
+    const listenFor = out.anchor4
+      || (Array.isArray(out.behaviors) ? out.behaviors.filter(Boolean).join("; ") : "");
+    if (out.question) out.hiringQuestions = [{ question: out.question, listenFor }];
+  }
+
+  return out;
+}
+
 function buildCultureHTML({ ctx, brand, values }) {
   const b = {
     clientName: (brand && brand.clientName) || (ctx && ctx.company) || "Summit Mechanical",
@@ -77,7 +130,7 @@ function buildCultureHTML({ ctx, brand, values }) {
 
   const tagline = (brand && brand.tagline) || "Heating · Cooling · Controls";
   const url = (brand && brand.url) || "www.gettrueseat.com";
-  const vals = Array.isArray(values) ? values.filter(Boolean) : [];
+  const vals = (Array.isArray(values) ? values.filter(Boolean) : []).map(adaptValue);
   const vCount = vals.length;
   const renderedValuePages = vCount || 1;         // empty state = 1 placeholder
   // TWO value-driven blocks, so the delta from the 24-page baseline is doubled.
