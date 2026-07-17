@@ -335,7 +335,7 @@ app.get("/playbook-proof", async (req, res) => {
     ];
     const html = buildPlaybookHTML({
       ctx: { company: "Summit Mechanical" },
-      brand: { clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
+      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
       values: PROOF_VALUES,
     });
     const browser = await getBrowser();
