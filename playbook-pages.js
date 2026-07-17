@@ -850,6 +850,47 @@ function behaviorLadderTable({ brand, standards }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  BEHAVIOR-LADDER — THREE-COLUMN VARIANT  (Culture Codified pp.5-7, BRAND STD)
+//  The approved brand-standard ladder: A-PLAYER | MEETS STANDARD | UNACCEPTABLE
+//  side by side, each a bulleted column with a semantic header (A-Player = blue
+//  rule, Unacceptable = red rule) and a matching pale body tint. A crew manager
+//  scans columns, not rows — "coach to the left, exit on the right." Reads the
+//  SAME standards{aPlayer[],meets[],unacceptable[]} shape as behaviorLadderTable
+//  (the row variant is kept, unused by the realigned deck but not removed). Any
+//  empty column still renders its header so the three-column grid never
+//  collapses to two; bullets accept string or array.
+function behaviorLadderColumns({ brand, standards }) {
+  const s = standards || {};
+  const blue = brand.blue || "#1F6FB2";
+  const RED = "#B0201A";
+  const arr = (v) => Array.isArray(v) ? v.filter(Boolean) : (v ? [String(v)] : []);
+  const cols = [
+    { label: "A-Player",       rule: blue, headColor: blue,               tint: "rgba(31,111,178,0.05)",  items: arr(s.aPlayer) },
+    { label: "Meets Standard", rule: "var(--border-default)", headColor: "var(--text-muted)", tint: "", items: arr(s.meets) },
+    { label: "Unacceptable",   rule: RED,  headColor: RED,                tint: "rgba(176,32,26,0.045)",  items: arr(s.unacceptable) },
+  ];
+  if (!cols.some((c) => c.items.length)) return "";
+  const cell = (c) => {
+    const bullets = c.items.length
+      ? c.items.map((it) => `<div style="display:flex; gap:8px; margin:0 0 10px; font-size:12.5px; line-height:1.5; color:var(--text-body);">
+          <span style="flex:0 0 auto; width:6px; height:6px; margin-top:6px; background:${c.headColor};"></span>
+          <span style="flex:1 1 auto;">${esc(it)}</span>
+        </div>`).join("")
+      : "";
+    return `<td style="width:33.33%; vertical-align:top; padding:0; border:1px solid var(--border-default); ${c.tint ? `background:${c.tint};` : ""}">
+      <div style="border-top:3px solid ${c.rule}; padding:13px 16px 14px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:${c.headColor}; margin:0 0 12px;">${esc(c.label)}</div>
+        ${bullets}
+      </div>
+    </td>`;
+  };
+  return `<table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+    <tbody><tr>${cols.map(cell).join("")}</tr></tbody>
+  </table>
+  <div style="margin-top:14px; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-faint);">Coach to the column on the left. Exit the column on the right.</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  HIRING Q / LISTEN-FOR TABLE PRIMITIVE  (Culture Codified pp.16-18)
 //  One value's interview questions + what to listen for.
 //   pairs = [{ question, listenFor }]. Two columns, reference layout.
@@ -943,5 +984,6 @@ module.exports = {
   coverPage, leadInBullets, navyCallout,
   scorecardNoSearchPage,
   behaviorLadderTable, hiringQuestionTable, behaviorLadderCoreList,
+  behaviorLadderColumns,
   pageInk, inkGradient, ringNest,
 };

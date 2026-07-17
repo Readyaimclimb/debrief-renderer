@@ -144,6 +144,15 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
   const pages = [];
   const push = (html) => pages.push(html);
 
+  // Brand-standard page map (Culture_Codifed_Brand_Standard.pdf): 16 counted
+  // interior pages for a 3-value tenant, cover + back cover uncounted. TOC is
+  // counted page 01. Value-driven blocks: behavior ladders (one page/value) +
+  // ONE combined hiring page (all values as stacked cards). So the counted
+  // total scales by ONE per value beyond 3 (ladders), the hiring page is fixed.
+  // PT recomputed here to the brand-standard baseline (overrides the value set
+  // above, which was the old doubled model).
+  const PT16 = 16 + (renderedValuePages - 3);
+
   // ── phys 01: COVER (no counter) ──
   push(P.coverPage({
     brand: b,
@@ -154,279 +163,280 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     tagline, url,
   }));
 
-  // ── phys 02: section-opener 01/09 Our Foundation (footer 01 / 24) ──
-  push(P.sectionOpenerPage({
-    brand: b, docTitle: DOC, sectionTitle: "Our Foundation",
-    sectionNum: 1, sectionTotal: 9,
-    headline: "People Are the Product.",
-    subhead: "Our purpose and mission — the ground everything else stands on.",
-    pageNo: 1, pageTotal: PT,
+  // ── phys 02: TABLE OF CONTENTS (footer 01 / 16) ──
+  push(P.lightContentPage({
+    brand: b, docTitle: DOC, eyebrow: "Inside This Playbook", title: "Table of Contents",
+    inner: P.tocList({ brand: b, entries: [
+      { n: "\u25B2", title: "Our Foundation — People Are the Product", desc: "The purpose and mission every core value serves.", page: 2 },
+      { n: 1, title: "What This Playbook Is", desc: "How we protect the culture as we grow.", page: 3 },
+      { n: 2, title: "Core Values Defined", desc: "Each value, with clear A-Player, Meets, and Unacceptable behavior.", page: 4 },
+      { n: 3, title: "Weekly System", desc: "The 4-week rotation for huddles and team meetings.", page: 4 + vCount },
+      { n: 4, title: "Scorecard System", desc: "Rate culture, not just output.", page: 5 + vCount },
+      { n: 5, title: "Coaching & Accountability", desc: "Coach the behavior, not the person.", page: 6 + vCount },
+      { n: 6, title: "Hiring for Core Values", desc: "Never hire someone who fails the values screen.", page: 8 + vCount },
+      { n: 7, title: "People Decisions", desc: "Values are hard gates.", page: 9 + vCount },
+      { n: 8, title: "Field Execution", desc: "How the values become daily life.", page: 10 + vCount },
+      { n: 9, title: "Manager Expectations", desc: "Not HR's job. Not the owner's job. Yours.", page: 11 + vCount },
+      { n: "\u2022", title: "The Standard Is Set", desc: numberWord(vCount || 3).replace(/^\w/, c => c.toUpperCase()) + " values. One standard. Every seat, every day.", page: 12 + vCount },
+    ] }),
+    pageNo: 1, pageTotal: PT16,
   }));
 
-  // ── phys 03: Purpose / Mission / Core Values (footer 02 / 24) ──
-  //  Purpose + mission read from the tenant's `culture` field. WHITE-LABEL: the
-  //  fallbacks are generic Trueseat-voice lines — the previous hardcoded Summit
-  //  HVAC mission prose was a cross-tenant leak (any client without a mission
-  //  would have rendered Summit's). Purpose block only renders when set.
+  // ── phys 03: OUR FOUNDATION — People Are the Product (footer 02 / 16) ──
+  //  Light page (NOT a dark opener — brand standard). Purpose + Mission from the
+  //  tenant `culture` field, white-label-safe generic fallbacks. Purpose block
+  //  only renders when set.
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Our Foundation", title: "Why We Exist.",
-    intro: "At " + b.clientName + " we hold a standard most companies only talk about. Commitments mean something here, and execution is a discipline, not a hope.",
+    brand: b, docTitle: DOC, eyebrow: "Our Foundation", title: "People Are the Product.",
+    intro: "The purpose and mission every core value serves.",
     inner:
       (cult.purpose
-        ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 10px;">Our Purpose</div>`
-          + `<p style="margin:0 0 24px; font-size:14.5px; line-height:1.6; color:var(--text-body); max-width:690px;">${P.esc(cult.purpose)}</p>`
+        ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:22px 0 8px;">Our Purpose</div>`
+          + `<p style="margin:0 0 22px; font-size:14.5px; line-height:1.6; color:var(--text-body); max-width:690px;">${P.esc(cult.purpose)}</p>`
         : "")
-      + P.navyCallout({ brand: b, eyebrow: "Our Mission", headline: "The work, and who does it.",
-        body: cult.mission
-          || ("To do the work right the first time — delivered by a " + b.clientName + " team that takes ownership, keeps its word, and puts the team before the individual.") })
-      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">Our Core Values</div>`
-      + P.behaviorLadderCoreList({ brand: b, values: vals }),
-    pageNo: 2, pageTotal: PT,
+      + (cult.mission
+        ? `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 8px;">Our Mission</div>`
+          + `<p style="margin:0 0 24px; font-size:14.5px; line-height:1.6; color:var(--text-body); max-width:690px;">${P.esc(cult.mission)}</p>`
+        : "")
+      + P.navyCallout({ brand: b, eyebrow: "Why This Playbook Exists",
+          headline: "Our core values are not goals to achieve.",
+          body: "They are the principles that give our goals meaning. This is who we are. This playbook turns them from words on a wall into the daily behavior of every person on the team." }),
+    pageNo: 2, pageTotal: PT16,
   }));
 
-  // ── phys 04: section-opener Introduction (footer 03 / 24) ──
-  push(P.sectionOpenerPage({
-    brand: b, docTitle: DOC, sectionTitle: "Introduction",
-    sectionNum: 2, sectionTotal: 9,
-    headline: "What This Playbook Is.",
-    subhead: "Turning values from words on a wall into daily behavior.",
-    pageNo: 3, pageTotal: PT,
-  }));
-
-  // ── phys 05: From Words to Behavior (footer 04 / 24) ──
+  // ── phys 04: 01 · WHAT THIS PLAYBOOK IS — Culture Is How We Operate (footer 03) ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "What This Playbook Is", title: "From Words to Behavior.",
-    intro: shortName + " is built on " + numberWord(vCount || 3) + " core values. As we grow, we protect our culture by keeping those values consistent — on every job, in every customer interaction, in every conversation between teammates.",
+    brand: b, docTitle: DOC, eyebrow: "01 · What This Playbook Is", title: "Culture Is How We Operate.",
+    intro: b.clientName + " is built on core values that shape our actions and guide our direction. As we grow, we protect our culture by keeping our values consistent — on every job, in every customer interaction, in every conversation between teammates.",
     inner:
-      `<p style="margin:0 0 22px; font-size:14.5px; line-height:1.6; color:var(--text-body); max-width:690px;">This playbook turns our values from words on a wall into daily behaviors every person on the team lives. It exists to do three things:</p>`
+      `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">Purpose</div>`
       + P.leadInBullets({ brand: b, items: [
-          { lead: "Translate.", body: "Turn core values into specific, observable behaviors." },
-          { lead: "Equip.", body: "Give managers practical tools to coach, recognize, and hold accountability." },
-          { lead: "Create consistency.", body: "Hold the same standard across every crew, office, and customer interaction." },
+          { lead: "", body: "Translate core values into specific, observable behaviors." },
+          { lead: "", body: "Give managers practical tools to coach, recognize, and hold accountability." },
+          { lead: "", body: "Create consistency across every crew, office, and customer interaction." },
+          { lead: "", body: "Ensure our culture stays strong as we grow." },
         ] })
-      + P.navyCallout({ brand: b, eyebrow: "The Manager's Job", headline: "You are the culture.",
-          body: "The team does not live the values because they are written down. They live them because their manager notices, coaches, and rewards them — every week." }),
-    pageNo: 4, pageTotal: PT,
+      + `<div style="margin:20px 0 26px; border-left:4px solid ${b.blue}; padding:4px 0 4px 18px; font-size:15px; font-weight:700; line-height:1.45; color:var(--text-strong); max-width:700px;">This is not optional. Culture is not a feel-good extra — it is how we operate. Every manager is responsible for bringing these values to life.</div>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">The Manager's Role</div>`
+      + P.threeBucketBlock({ brand: b, items: [
+          { eyebrow: "", title: "Model", bullets: ["Live the values yourself, every day."] },
+          { eyebrow: "", title: "Reinforce", bullets: ["Recognize when values are lived. Name it and celebrate it."] },
+          { eyebrow: "", title: "Coach", bullets: ["Address behavior misses quickly, directly, and with care."] },
+        ] }),
+    pageNo: 3, pageTotal: PT16,
   }));
 
-  // ── phys 06: section-opener Core Values Defined (footer 05 / 24) ──
+  // ── phys 05: section-opener 02/09 Core Values Defined (dark) ──
   push(P.sectionOpenerPage({
     brand: b, docTitle: DOC, sectionTitle: "Core Values Defined",
-    sectionNum: 3, sectionTotal: 9,
+    sectionNum: 2, sectionTotal: 9,
     headline: "The Behavior Standards.",
-    subhead: "Each value, with clear A-Player / Meets / Unacceptable standards.",
-    pageNo: 5, pageTotal: PT,
+    subhead: "Each value has a defining phrase and clear behavioral standards — A-Player, Meets Standard, and Unacceptable. Use this section as your reference for coaching and performance conversations.",
+    pageNo: 4, pageTotal: PT16,
   }));
 
-  // ── phys 07: How to Read the Ladder (footer 06 / 24) ──
-  push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Behavior Standards", title: "How to Read the Ladder.",
-    intro: "Each value has a defining phrase and clear behavioral standards. Use this section as your reference for coaching and performance conversations — where is this person on the ladder, and what's the next rung?",
-    pageNo: 6, pageTotal: PT,
-  }));
-
-  // ── phys 08..N: behavior-ladder pages, one per value (footer 07 onward) ──
-  let counter = 7;
+  // ── behavior-ladder pages, one per value (three-column brand-standard format) ──
+  let counter = 5;
   if (!vCount) {
     push(P.lightContentPage({
-      brand: b, docTitle: DOC, eyebrow: "Behavior Standards",
+      brand: b, docTitle: DOC, eyebrow: "Core Values Defined",
       title: "Define your core values to complete this playbook.",
       intro: "Once your core values are captured in onboarding, each one renders here with its A-Player, Meets Standard, and Unacceptable behavior ladder.",
-      pageNo: counter, pageTotal: PT,
+      pageNo: counter, pageTotal: PT16,
     }));
     counter += 1;
   } else {
-    vals.forEach((value) => {
+    vals.forEach((value, i) => {
       const v = value || {};
       push(P.lightContentPage({
-        brand: b, docTitle: DOC, eyebrow: "Core Values Defined",
+        brand: b, docTitle: DOC,
+        eyebrow: "02 · Behavior Standards · Value " + (i + 1) + " of " + vCount,
         title: v.name || "Core Value",
         intro: v.phrase
           ? "\u201c" + v.phrase + "\u201d " + (v.definition || "")
           : (v.definition || ""),
-        inner: P.behaviorLadderTable({ brand: b, standards: v.standards }),
-        pageNo: counter, pageTotal: PT,
+        inner: P.behaviorLadderColumns({ brand: b, standards: v.standards }),
+        pageNo: counter, pageTotal: PT16,
       }));
       counter += 1;
     });
   }
 
-  // ── The 4-Week Rotation ──
+  // ── 03 · WEEKLY SYSTEM — Consistency Is the Goal (4-week rotation, verbatim) ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Weekly Core Values System", title: "The 4-Week Rotation.",
-    intro: "Run this system in your weekly team meetings or crew huddles. Each format takes 5–10 minutes. Rotate through all four each month — consistency is the goal.",
+    brand: b, docTitle: DOC, eyebrow: "03 · Weekly System · 4-Week Rotation", title: "Consistency Is the Goal.",
+    intro: "Run this system in your weekly team meetings or job huddles. Each format takes 5–10 minutes maximum. Rotate through all four each month, every month, without exception.",
     inner: P.numberedStageList({ brand: b, items: [
-      { title: "Caught in the Act", tag: "Week 1 · Recognition", body: "Name someone who clearly lived a value this week. Be specific: what did they do, when, where, and why it mattered. Connect it back to the value out loud." },
-      { title: "Real Talk", tag: "Week 2 · Scenario", body: "Pose a real situation the crew hit this week. Ask: which value was on the line, and what did living it look like? Debate it together." },
-      { title: "Self-Check", tag: "Week 3 · Where Am I?", body: "Each person picks one value and rates themselves honestly against the ladder. One thing to keep doing, one thing to improve." },
-      { title: "Raise the Bar", tag: "Week 4 · A-Player Definition", body: "Pick one value. Walk through A-Player / Meets / Unacceptable as a team. Ask: where are we now, where do we want to be? Commit to one behavior to improve before next month." },
+      { title: "Caught in the Act", tag: "Recognition", body: "Name someone who clearly lived a value this week. Be specific: what they did, when, where, and why it mattered. Tie it to the value by name. Say out loud: \u201cThis is the standard. This is who we are.\u201d" },
+      { title: "Anti-Value", tag: "Accountability", body: "Describe a behavior where a value was NOT followed (no names if it's ongoing). Name which value was missed and what it looked like. Describe exactly what should have happened. Restate the expectation going forward." },
+      { title: "Under Pressure", tag: "Scenario Training", body: "Give a real scenario from a recent job or customer call. Ask: \u201cWhat does this value look like here? What does the A-Player do?\u201d Build the answer together. Lock in the standard response." },
+      { title: "Raise the Bar", tag: "A-Player Definition", body: "Pick one value for the week. Walk through A-Player, Meets, and Unacceptable. Ask: \u201cWhere are we as a team right now? Where do we want to be?\u201d Commit to one specific behavior to improve before next month." },
     ] }),
-    pageNo: counter, pageTotal: PT,
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── Core Values Scorecard ──
+  // ── 04 · SCORECARD SYSTEM — Rate Culture, Not Just Output (5/3/1 ONLY) ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Core Values Scorecard", title: "Rate Culture, Not Just Metrics.",
-    intro: "Use this scorecard in monthly or quarterly mentor meetings. It creates a shared language for evaluating culture — separate from performance metrics.",
-    inner: P.metricTable({ brand: b,
-      columns: ["Rating", "Level", "What It Means"],
-      colWidths: ["80px", "150px", "auto"],
-      rows: [
-        ["5", "A-Player", "Consistently models the value and raises it in others."],
-        ["4", "Strong", "Lives the value reliably without prompting."],
-        ["3", "Meets", "Meets the standard; still needs occasional reminders."],
-        ["2", "Developing", "Inconsistent; the value is not yet a habit."],
-        ["1", "Concern", "Behavior actively conflicts with the value."],
-      ] })
-      + P.navyCallout({ brand: b, eyebrow: "The Coaching Trigger", headline: "An average below 3.5 is not a footnote.",
-          body: "An average below 3.5 across values is a coaching trigger. Culture scores are discussed openly in the mentor meeting — the goal is a shared read, not a surprise." }),
-    pageNo: counter, pageTotal: PT,
-  }));
-  counter += 1;
-
-  // ── Manager Coaching & Accountability (escalation ladder) ──
-  push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Manager Coaching & Accountability", title: "This Behavior Doesn't Match Who We Are.",
-    intro: "Tie every coaching conversation to a value — not to a personality. You're not saying \u201cyou're a problem.\u201d You're saying \u201cthis behavior doesn't match who we are.\u201d",
+    brand: b, docTitle: DOC, eyebrow: "04 · Scorecard System", title: "Rate Culture, Not Just Output.",
+    intro: "Use this scorecard in mentor meetings. It creates a shared language for evaluating culture alongside performance metrics.",
     inner:
-      `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">In 1-on-1s — Values Check-In Questions</div>`
+      `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">The Rating Scale</div>`
+      + P.metricTable({ brand: b,
+          columns: ["Rating", "Level", "What It Means"],
+          colWidths: ["80px", "150px", "auto"],
+          rows: [
+            ["5", "A-Player", "Consistently exceeds the standard. Others learn from this person. Elevates the team."],
+            ["3", "Meets Standard", "Reliably performs to expectation. Solid contributor. Room to grow."],
+            ["1", "Below Standard", "Behavior does not reflect the value. Requires coaching, reset, or escalation."],
+          ] })
+      + `<p style="margin:14px 0 26px; font-size:13px; line-height:1.6; color:var(--text-body); max-width:700px;"><strong style="color:var(--text-strong);">No 2s or 4s.</strong> A rating forces a clear position — no hiding in the middle.</p>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">The Scorecard</div>`
+      + P.metricTable({ brand: b,
+          columns: ["Core Value", "Self", "Manager", "Coaching Focus"],
+          colWidths: ["auto", "88px", "100px", "175px"],
+          rows: vals.length
+            ? vals.map((v) => [ (v && v.name) || "Core Value", "5 / 3 / 1", "5 / 3 / 1", "" ])
+            : [["Core Value", "5 / 3 / 1", "5 / 3 / 1", ""]] })
+      + P.navyCallout({ brand: b, eyebrow: "How to Use in Mentor Meetings",
+          headline: "Complete it independently. Compare openly.",
+          body: "Both manager and team member complete the scorecard independently before the meeting. Compare openly — the gaps reveal the most important conversations. Focus on one value for improvement per quarter, set one concrete behavior change, and revisit next session." }),
+    pageNo: counter, pageTotal: PT16,
+  }));
+  counter += 1;
+
+  // ── 05 · COACHING & ACCOUNTABILITY — Coach the Behavior, Not the Person ──
+  push(P.lightContentPage({
+    brand: b, docTitle: DOC, eyebrow: "05 · Coaching & Accountability", title: "Coach the Behavior, Not the Person.",
+    intro: "Tie every coaching conversation to a value, not to a personality. You're not saying \u201cyou're a problem.\u201d You're saying \u201cthis behavior doesn't match who we are.\u201d",
+    inner:
+      `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">1-on-1 Values Check-In Questions</div>`
       + P.leadInBullets({ brand: b, items: [
           { lead: "Opening.", body: "\u201cWhich value did you live well this week? Walk me through it.\u201d" },
           { lead: "Growth.", body: "\u201cWhere did you fall short of our values? What would you do differently?\u201d" },
-          { lead: "Peer.", body: "\u201cWho on the crew lived a value this week in a way worth calling out?\u201d" },
+          { lead: "Peer.", body: "\u201cWho on the team is living our values at the highest level right now?\u201d" },
+          { lead: "Raise.", body: "\u201cWhat's one thing in the next 30 days to raise your game on a value?\u201d" },
         ] })
-      + `<div style="margin-top:22px; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:14px;">When Behavior Doesn't Change — The Escalation Ladder</div>`
-      + P.numberedStageList({ brand: b, items: [
-          { title: "First Coaching Conversation", body: "Private, direct. Name the value missed. Set the expectation. Document it." },
-          { title: "Reset & Written Agreement", body: "Formal reset. Specific behavior change required. Timeline defined. Both parties sign off." },
-          { title: "Final Decision", body: "If the value gap persists after a genuine chance to change, the person is not the right fit — no matter how skilled. Character earns a place on the team." },
-        ] }),
-    pageNo: counter, pageTotal: PT,
+      + `<div style="margin:22px 0 24px; border:1px solid var(--border-default); border-left:4px solid ${b.blue}; padding:16px 18px; background:rgba(31,111,178,0.03);">`
+        + `<div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin:0 0 8px;">Coaching Script — Worked Example</div>`
+        + `<div style="font-size:13px; line-height:1.6; color:var(--text-body);">Use each value's own language. For ` + P.esc((vals[0] && vals[0].name) || "a value") + `: <em>\u201cI want to talk about what happened on that job. Our standard is that we ` + P.esc(((vals[0] && vals[0].phrase) || "live this value").replace(/\.$/, "").toLowerCase()) + `. What I saw was [specific behavior]. That's not who we are. Going forward, I need [specific change]. Can I count on that?\u201d</em></div>`
+      + `</div>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">The Escalation Framework</div>`
+      + P.metricTable({ brand: b,
+          columns: ["Step", "Action", "What It Looks Like"],
+          colWidths: ["70px", "200px", "auto"],
+          rows: [
+            ["1st", "Coaching Conversation", "Private, direct. Name the value missed. Set the expectation. Document it."],
+            ["2nd", "Reset & Written Agreement", "Formal reset. Specific behavior change required. Timeline defined. Both sign off."],
+            ["3rd", "Role-Fit Discussion", "Is this person a fit for " + shortName + "? Involve leadership. Values violations are a disqualifier."],
+          ] }),
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── section-opener Hiring for Core Values ──
+  // ── section-opener 06/09 Hiring for Core Values (dark) ──
   push(P.sectionOpenerPage({
     brand: b, docTitle: DOC, sectionTitle: "Hiring for Core Values",
     sectionNum: 6, sectionTotal: 9,
-    headline: "We Can Train Skills. Not Character.",
-    subhead: "Do not hire someone who does not align — no matter how qualified.",
-    pageNo: counter, pageTotal: PT,
+    headline: "Train Skills. Screen Character.",
+    subhead: "Never hire someone who fails the values screen.",
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── Character Is Not Trainable ──
+  // ── 06 · HIRING FOR VALUES — one page, all values as stacked cards ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Hiring for Values", title: "Character Is Not Trainable.",
-    intro: "We can train skills. We cannot train character. Do not hire someone who does not align with our values — no matter how qualified they look on paper.",
-    inner: P.navyCallout({ brand: b, eyebrow: "The Hiring Rule", headline: "Alignment first. Always.",
-      body: "The pages that follow give the interview questions for each value, and exactly what to listen for in the answer. Ask the question, then let the candidate talk — the story tells you whether the value is real." }),
-    pageNo: counter, pageTotal: PT,
-  }));
-  counter += 1;
-
-  // ── hiring-questions pages, one per value ──
-  if (!vCount) {
-    push(P.lightContentPage({
-      brand: b, docTitle: DOC, eyebrow: "Hiring for Values",
-      title: "Define your core values to complete this section.",
-      intro: "Each value renders its interview questions and what to listen for once your values are captured.",
-      pageNo: counter, pageTotal: PT,
-    }));
-    counter += 1;
-  } else {
-    vals.forEach((value) => {
-      const v = value || {};
-      push(P.lightContentPage({
-        brand: b, docTitle: DOC, eyebrow: "Hiring for Values",
-        title: v.name || "Core Value",
-        intro: v.phrase ? "\u201c" + v.phrase + "\u201d" : "",
-        inner: P.hiringQuestionTable({ brand: b, pairs: v.hiringQuestions || [] }),
-        pageNo: counter, pageTotal: PT,
-      }));
-      counter += 1;
-    });
-  }
-
-  // ── Promotions & People Decisions ──
-  push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Promotions & People Decisions", title: "Not Soft Criteria — Hard Gates.",
-    intro: "At " + shortName + ", our values are not soft criteria. They are hard gates on every people decision we make.",
+    brand: b, docTitle: DOC, eyebrow: "06 · Hiring for Core Values", title: "We Can Train Skills. We Cannot Train Character.",
+    intro: "Do not hire someone who does not align with our values — no matter how strong they look on paper. Use these questions and listen-fors in every interview.",
     inner:
-      P.navyCallout({ brand: b, eyebrow: "The Rule", headline: "A promotion is a statement.",
-        body: "A promotion says this person represents " + shortName + " at a higher level. You cannot promote someone who does not demonstrate A-Player behavior in our values. Technical skill earns compensation. Character earns leadership." })
+      (vCount
+        ? vals.map((v) => {
+            const q = (v.hiringQuestions && v.hiringQuestions[0]) || {};
+            return `<div style="border:1px solid var(--border-default); border-left:4px solid ${b.blue}; padding:16px 18px; margin:0 0 16px; background:#fff;">
+              <div style="font-size:15px; font-weight:700; color:var(--text-strong); margin:0 0 8px;">${P.esc(v.name || "Core Value")}</div>
+              <div style="font-size:13.5px; font-weight:700; color:var(--text-strong); margin:0 0 8px; line-height:1.45;">\u201c${P.esc(q.question || v.question || "")}\u201d</div>
+              <div style="font-size:12.5px; line-height:1.55; color:var(--text-body);"><span style="font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:${b.blue}; font-size:10.5px;">Listen For</span>&nbsp;&nbsp;${P.esc(q.listenFor || "")}</div>
+            </div>`;
+          }).join("")
+        : `<p style="margin:0; font-size:14px; color:var(--text-faint);">Your interview questions and listen-fors render here once your core values are captured.</p>`)
+      + `<p style="margin:8px 0 0; font-size:12px; line-height:1.55; color:var(--text-faint); max-width:700px;">The full interview system — funnel, scoring rubrics, and decision matrix — lives in the Hiring &amp; Talent Development Playbook.</p>`,
+    pageNo: counter, pageTotal: PT16,
+  }));
+  counter += 1;
+
+  // ── 07 · PEOPLE DECISIONS — Values Are Hard Gates (5/3/1 tied gates) ──
+  push(P.lightContentPage({
+    brand: b, docTitle: DOC, eyebrow: "07 · People Decisions", title: "Values Are Hard Gates.",
+    intro: "Our values are not soft criteria. They are hard gates on every people decision we make. A promotion is a statement that this person represents " + shortName + " at a higher level.",
+    inner:
+      `<div style="margin:0 0 26px; border-left:4px solid ${b.blue}; padding:4px 0 4px 18px;">`
+        + `<div style="font-size:20px; font-weight:700; line-height:1.3; color:var(--text-strong);">\u201cTechnical skill earns compensation. Character earns leadership.\u201d</div>`
+        + `<div style="font-size:12px; color:var(--text-faint); margin-top:6px;">The Rule</div>`
+      + `</div>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">The Gates</div>`
       + P.metricTable({ brand: b,
           columns: ["Decision", "Values Requirement"],
-          colWidths: ["215px", "auto"],
+          colWidths: ["255px", "auto"],
           rows: [
-            ["Promote to Lead", "A-Player on at least two values; no value below Meets."],
-            ["Give more responsibility", "Meets or better on all values; trending up."],
-            ["Put in front of customers", "A-Player on the customer-facing value; no Concern anywhere."],
-            ["Move on from someone", "Persistent Concern after a genuine chance to change."],
+            ["Promote to Lead / Manager", "Must score 5 on at least " + (vCount >= 2 ? "2 of " + vCount : "the") + " values in the last scorecard. No 1s."],
+            ["Retain after a performance issue", "Ongoing values violations = exit. Skill gaps are trainable; values misalignment is not."],
+            ["Extend probationary period", "Any score of 1 in the first 90 days triggers an automatic reset and review."],
+            ["Re-hire / bring back", "Previous values violations = disqualification, regardless of technical skill."],
           ] }),
-    pageNo: counter, pageTotal: PT,
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── Field Execution ──
+  // ── 08 · FIELD EXECUTION — How the Values Become Daily Life (6 rows) ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Field Execution", title: "From Binder to Daily Life.",
-    intro: "A playbook that lives in a binder is useless. Here is how our values become part of daily life — from the field to the office to every customer interaction.",
-    inner: P.numberedStageList({ brand: b, items: [
-      { title: "In Every Vehicle", body: "Keep the one-page values card in every service vehicle. Reference it when coaching in the field — it should feel as natural as checking the equipment list." },
-      { title: "In Onboarding", body: "Every new hire completes a values orientation in week one. By the end of the week they can name all values and give a real example of each." },
-      { title: "In Every Meeting", body: "Open or close team meetings with a value moment — a recognition, a scenario, or a self-check. Thirty seconds keeps it alive." },
-      { title: "In Customer Reviews", body: "When a customer praises the crew, tie it back to a value out loud. When something goes wrong, do the same. The values explain both." },
+    brand: b, docTitle: DOC, eyebrow: "08 · Field Execution", title: "How the Values Become Daily Life.",
+    intro: "Here is how the values become part of daily life — from the field to the office to every customer interaction.",
+    inner: P.leadInBullets({ brand: b, items: [
+      { lead: "In every vehicle.", body: "Keep the values one-pager in every service vehicle. Reference it when coaching in the field." },
+      { lead: "In onboarding.", body: "Every new hire completes a values orientation in week one — they can name all " + numberWord(vCount || 3) + " and give a real example of each." },
+      { lead: "In weekly huddles.", body: "Run the 4-week rotation (Section 03) every week without exception. 5–10 minutes. Non-negotiable." },
+      { lead: "In daily conversation.", body: "Use the language. Call values out by name: \u201cThat's " + ((vals[0] && vals[0].name) || "our value") + ".\u201d The more it's said, the more it's real." },
+      { lead: "In customer interactions.", body: "When someone goes above and beyond, name the value out loud. Make it visible and celebrated." },
+      { lead: "In performance reviews.", body: "The scorecard (Section 04) is a required part of every formal review. Behavior carries equal weight to output." },
     ] }),
-    pageNo: counter, pageTotal: PT,
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── Manager Expectations ──
+  // ── 09 · MANAGER EXPECTATIONS — Not HR's Job. Not the Owner's Job. Yours. (6) ──
   push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "Manager Expectations", title: "Not HR's Job. Not the Owner's. Yours.",
-    intro: "Culture is not HR's job. It is not the owner's job. Culture is YOUR job — every manager, every week, every conversation. These are the minimum expectations for every leader at " + shortName + ".",
+    brand: b, docTitle: DOC, eyebrow: "09 · Manager Expectations", title: "Not HR's Job. Not the Owner's Job. Yours.",
+    intro: "These are the minimum expectations for every person who leads a team at " + b.clientName + ".",
     inner: P.numberedStageList({ brand: b, items: [
-      { title: "Run the Weekly Values System", body: "Every week, no exceptions. Even a short huddle counts." },
-      { title: "Use the Language Daily", body: "Name the value in the moment — in praise and in correction. The words have to live in normal conversation, not just meetings." },
-      { title: "Coach to the Ladder", body: "Every performance conversation ties to a value and a rung. Behavior, not personality." },
-      { title: "Model It Yourself", body: "The team calibrates to you, not the poster. Where you set the bar is where the bar is." },
+      { title: "Run the weekly system", body: "Every week, no exceptions. Even short huddles count." },
+      { title: "Use the language daily", body: "Name the values in real conversations, not just meetings." },
+      { title: "Complete scorecards every quarter", body: "For every direct report. On time. With honest ratings." },
+      { title: "Coach in the moment", body: "Don't let behavior misses slide. Address them the same day where possible." },
+      { title: "Model the values yourself", body: "You cannot hold others to a standard you don't keep." },
+      { title: "Hire and fire by the values", body: "Never hire someone who fails the values screen. Never retain someone who consistently violates them." },
     ] }),
-    pageNo: counter, pageTotal: PT,
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── section-opener The Standard Is Set ──
+  // ── section-opener 09/09 The Standard Is Set (dark) + value tiles ──
   push(P.sectionOpenerPage({
     brand: b, docTitle: DOC, sectionTitle: "The Standard Is Set",
     sectionNum: 9, sectionTotal: 9,
-    headline: "Now Go Lead It.",
-    subhead: "You have the language. The culture is what you do with it this week.",
-    pageNo: counter, pageTotal: PT,
+    headline: "This Is Our Standard.",
+    subhead: numberWord(vCount || 3).replace(/^\w/, (c) => c.toUpperCase()) + " values. One standard. Every seat, every day.",
+    pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
-
-  // ── The Behavior You Celebrate (values recap) ──
-  push(P.lightContentPage({
-    brand: b, docTitle: DOC, eyebrow: "The Standard Is Set", title: "The Behavior You Celebrate Is the Culture You Get.",
-    intro: "Culture is not an annual event. It is a weekly habit — built one recognition, one coaching conversation, one modeled moment at a time.",
-    inner:
-      P.navyCallout({ brand: b, eyebrow: "The " + shortName + " Standard", headline: "The behavior you celebrate is the culture you get.",
-        body: "The behavior you tolerate is the culture you keep." })
-      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">Our Values, One More Time</div>`
-      + P.behaviorLadderCoreList({ brand: b, values: vals, phraseOnly: true }),
-    pageNo: counter, pageTotal: PT,
-  }));
 
   // ── back cover: CTA + brand lockup (no counter) ──
   push(P.closingCtaPage({
     brand: b, docTitle: DOC,
     eyebrow: "People Are the Product",
     headline: "The Standard Is Set. Now Go Live It.",
-    body: "This is how " + b.clientName + " builds a team most companies only talk about. Lead the values. Coach the values. Hire and promote by the values — every week.",
+    body: "This is how " + b.clientName + " builds a team most companies only talk about. Lead the values. Coach the values. Recognize the values — every week.",
     ctaLabel: "Open Your Leadership Tools", ctaUrl: url,
-    pageNo: counter, pageTotal: PT,
+    pageNo: counter, pageTotal: PT16,
   }));
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
