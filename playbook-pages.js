@@ -141,7 +141,7 @@ function lightTitle(brand, eyebrow, title, opts = {}) {
 // ════════════════════════════════════════════════════════════════════════
 function sectionOpenerPage({
   brand, docTitle, sectionTitle, sectionNum, sectionTotal,
-  headline, subhead, pageNo, pageTotal,
+  headline, subhead, extra, pageNo, pageTotal,
 }) {
   const navy = brand.navy || "#16242E";
   const blue = brand.blue || "#1F6FB2";
@@ -215,6 +215,7 @@ function sectionOpenerPage({
       <h1 style="margin:0; font-weight:700; font-size:44px; line-height:1.08; letter-spacing:-0.02em; color:#FFFFFF; max-width:600px;">${esc(headline)}</h1>
       <div style="width:64px; height:4px; background:${blue}; margin:26px 0 0;"></div>
       ${sub}
+      ${extra ? `<div style="margin-top:30px; max-width:640px;">${extra}</div>` : ""}
     </div>`;
 
   return `<section class="page" style="width:816px; height:1056px; position:relative; overflow:hidden; box-sizing:border-box; background:${bg}; color:#FFFFFF;">
@@ -540,12 +541,29 @@ function numberedStageList({ brand, items, startAt = 1 }) {
     const body = it.body
       ? `<div style="font-size:13.5px; line-height:1.6; color:var(--text-body); margin-top:6px; max-width:640px;">${esc(it.body)}</div>`
       : "";
+    // substeps[] — optional label/text rows under the stage (T&C rotation's
+    // Identify/Describe/Connect/Reinforce). Renders only when present.
+    const subs = Array.isArray(it.substeps) && it.substeps.length
+      ? `<div style="margin-top:10px;">` + it.substeps.filter(Boolean).map((s) =>
+          `<div style="display:flex; gap:12px; margin:0 0 5px; font-size:12.5px; line-height:1.5;">
+            <span style="flex:0 0 auto; width:74px; font-weight:700; color:${blue};">${esc(s.label || "")}</span>
+            <span style="flex:1 1 auto; color:var(--text-body);">${esc(s.text || "")}</span>
+          </div>`).join("") + `</div>`
+      : "";
+    // prompt — optional scripted "Manager prompt" callout under the stage.
+    // Renders only when present (blank-field guard for tenants without it).
+    const prompt = it.prompt
+      ? `<div style="margin-top:12px; border-left:3px solid ${blue}; padding:8px 0 8px 14px; background:rgba(31,111,178,0.03);">
+          <span style="font-size:10.5px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted);">Manager Prompt</span>
+          <div style="font-size:12.5px; line-height:1.55; color:var(--text-body); margin-top:4px; font-style:italic;">${esc(it.prompt)}</div>
+        </div>`
+      : "";
     const divider = i < list.length - 1 ? "border-bottom:1px solid var(--border-subtle);" : "";
     return `<div style="display:flex; gap:22px; padding:18px 0 20px; ${divider}">
       <div style="flex:0 0 auto; width:34px; font-size:26px; font-weight:700; line-height:1; color:${blue};">${esc(String(num))}</div>
       <div style="min-width:0;">
         <span style="font-size:16px; font-weight:700; color:var(--text-strong);">${esc(it.title || "")}</span>${tag}
-        ${body}
+        ${body}${subs}${prompt}
       </div>
     </div>`;
   }).join("");
@@ -891,6 +909,69 @@ function behaviorLadderColumns({ brand, standards }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+//  COACHING-SCRIPT CARDS  (Culture Codified p.11, T&C manager-tips depth)
+//  Per-value worked "miss" scripts. items[] = { valueName, script }. Each is a
+//  blue-left-border card: value label + italic scripted language. Renders only
+//  populated cards; empty items[] returns "" so the section can be omitted.
+function coachingScriptCards({ brand, items }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = (Array.isArray(items) ? items : []).filter((x) => x && x.script);
+  if (!list.length) return "";
+  return list.map((it) => `<div style="border-left:3px solid ${blue}; padding:10px 0 10px 16px; margin:0 0 14px;">
+    <div style="font-size:12px; font-weight:700; letter-spacing:0.04em; color:var(--text-strong); margin:0 0 5px;">${esc(it.valueName || "")}</div>
+    <div style="font-size:12.5px; line-height:1.6; color:var(--text-body); font-style:italic;">${esc(it.script)}</div>
+  </div>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  MULTI-QUESTION HIRING CARDS  (Culture Codified p.13, T&C two-Q depth)
+//  One card per value, each holding 1..N question/listenFor pairs. values[] =
+//  { name, hiringQuestions:[{question, listenFor}] }. Extends the single-Q
+//  card layout to stack multiple Q/LISTEN-FOR pairs inside one value card.
+function multiHiringCards({ brand, values }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = (Array.isArray(values) ? values : []).filter(Boolean);
+  if (!list.length) return "";
+  return list.map((v) => {
+    const pairs = (Array.isArray(v.hiringQuestions) ? v.hiringQuestions : []).filter((q) => q && (q.question || q.listenFor));
+    if (!pairs.length) return "";
+    const qs = pairs.map((q, i) => `
+      <div style="${i > 0 ? "margin-top:12px; padding-top:12px; border-top:1px solid var(--border-subtle);" : ""}">
+        <div style="font-size:13px; font-weight:700; color:var(--text-strong); line-height:1.45; margin:0 0 6px;">\u201c${esc(q.question || "")}\u201d</div>
+        <div style="font-size:12px; line-height:1.55; color:var(--text-body);"><span style="font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:${blue}; font-size:10px;">Listen For</span>&nbsp;&nbsp;${esc(q.listenFor || "")}</div>
+      </div>`).join("");
+    return `<div style="border:1px solid var(--border-default); border-left:4px solid ${blue}; padding:15px 18px; margin:0 0 14px; background:#fff;">
+      <div style="font-size:15px; font-weight:700; color:var(--text-strong); margin:0 0 10px;">${esc(v.name || "Core Value")}</div>
+      ${qs}
+    </div>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+//  ACRONYM LETTER-TILE ROW  (Culture Codified closer, CONDITIONAL on acronym)
+//  Renders only when an explicit acronym is set AND its length matches the
+//  value count (guard against near-words). tiles[] = { letter, name }.
+//  dark=true for the dark closing page. Alternating tile accent by index.
+function letterTileRow({ brand, tiles, dark = false }) {
+  const blue = brand.blue || "#1F6FB2";
+  const list = (Array.isArray(tiles) ? tiles : []).filter((t) => t && t.letter);
+  if (!list.length) return "";
+  const cells = list.map((t, i) => {
+    const accent = i % 2 === 1;
+    const tileBg = dark
+      ? (accent ? blue : "rgba(255,255,255,0.06)")
+      : (accent ? blue : "#22303C");
+    const nameColor = dark ? "rgba(255,255,255,0.7)" : "var(--text-muted)";
+    const nameBg = dark ? "rgba(255,255,255,0.04)" : "#F0F0EF";
+    return `<td style="width:${(100 / list.length).toFixed(2)}%; vertical-align:top; padding:0 3px;">
+      <div style="background:${tileBg}; padding:14px 0; text-align:center; font-size:26px; font-weight:700; color:#fff;">${esc(t.letter)}</div>
+      <div style="background:${nameBg}; padding:9px 6px; text-align:center; font-size:11px; line-height:1.35; color:${nameColor};">${esc(t.name || "")}</div>
+    </td>`;
+  }).join("");
+  return `<table style="width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; margin-top:6px;"><tbody><tr>${cells}</tr></tbody></table>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════
 //  HIRING Q / LISTEN-FOR TABLE PRIMITIVE  (Culture Codified pp.16-18)
 //  One value's interview questions + what to listen for.
 //   pairs = [{ question, listenFor }]. Two columns, reference layout.
@@ -984,6 +1065,6 @@ module.exports = {
   coverPage, leadInBullets, navyCallout,
   scorecardNoSearchPage,
   behaviorLadderTable, hiringQuestionTable, behaviorLadderCoreList,
-  behaviorLadderColumns,
+  behaviorLadderColumns, coachingScriptCards, multiHiringCards, letterTileRow,
   pageInk, inkGradient, ringNest,
 };

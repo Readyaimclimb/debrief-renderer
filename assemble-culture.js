@@ -218,11 +218,15 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
         ] })
       + `<div style="margin:20px 0 26px; border-left:4px solid ${b.blue}; padding:4px 0 4px 18px; font-size:15px; font-weight:700; line-height:1.45; color:var(--text-strong); max-width:700px;">This is not optional. Culture is not a feel-good extra — it is how we operate. Every manager is responsible for bringing these values to life.</div>`
       + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 14px;">The Manager's Role</div>`
-      + P.threeBucketBlock({ brand: b, items: [
-          { eyebrow: "", title: "Model", bullets: ["Live the values yourself, every day."] },
-          { eyebrow: "", title: "Reinforce", bullets: ["Recognize when values are lived. Name it and celebrate it."] },
-          { eyebrow: "", title: "Coach", bullets: ["Address behavior misses quickly, directly, and with care."] },
-        ] }),
+      + P.threeBucketBlock({ brand: b, items:
+          (Array.isArray(cult.managerRoles) && cult.managerRoles.length
+            ? cult.managerRoles
+            : [
+                { title: "Model", body: "Live the values yourself, every day." },
+                { title: "Reinforce", body: "Recognize when values are lived. Name it and celebrate it." },
+                { title: "Coach", body: "Address behavior misses quickly, directly, and with care." },
+              ]
+          ).map((r) => ({ eyebrow: "", title: r.title, bullets: [r.body] })) }),
     pageNo: 3, pageTotal: PT16,
   }));
 
@@ -267,10 +271,10 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     brand: b, docTitle: DOC, eyebrow: "03 · Weekly System · 4-Week Rotation", title: "Consistency Is the Goal.",
     intro: "Run this system in your weekly team meetings or job huddles. Each format takes 5–10 minutes maximum. Rotate through all four each month, every month, without exception.",
     inner: P.numberedStageList({ brand: b, items: [
-      { title: "Caught in the Act", tag: "Recognition", body: "Name someone who clearly lived a value this week. Be specific: what they did, when, where, and why it mattered. Tie it to the value by name. Say out loud: \u201cThis is the standard. This is who we are.\u201d" },
-      { title: "Anti-Value", tag: "Accountability", body: "Describe a behavior where a value was NOT followed (no names if it's ongoing). Name which value was missed and what it looked like. Describe exactly what should have happened. Restate the expectation going forward." },
-      { title: "Under Pressure", tag: "Scenario Training", body: "Give a real scenario from a recent job or customer call. Ask: \u201cWhat does this value look like here? What does the A-Player do?\u201d Build the answer together. Lock in the standard response." },
-      { title: "Raise the Bar", tag: "A-Player Definition", body: "Pick one value for the week. Walk through A-Player, Meets, and Unacceptable. Ask: \u201cWhere are we as a team right now? Where do we want to be?\u201d Commit to one specific behavior to improve before next month." },
+      { title: "Caught in the Act", tag: "Recognition", body: "Name someone who clearly lived a value this week. Be specific: what they did, when, where, and why it mattered. Tie it to the value by name. Say out loud: \u201cThis is the standard. This is who we are.\u201d", prompt: (cult.rotationPrompts || [])[0] },
+      { title: "Anti-Value", tag: "Accountability", body: "Describe a behavior where a value was NOT followed (no names if it's ongoing). Name which value was missed and what it looked like. Describe exactly what should have happened. Restate the expectation going forward.", prompt: (cult.rotationPrompts || [])[1] },
+      { title: "Under Pressure", tag: "Scenario Training", body: "Give a real scenario from a recent job or customer call. Ask: \u201cWhat does this value look like here? What does the A-Player do?\u201d Build the answer together. Lock in the standard response.", prompt: (cult.rotationPrompts || [])[2] },
+      { title: "Raise the Bar", tag: "A-Player Definition", body: "Pick one value for the week. Walk through A-Player, Meets, and Unacceptable. Ask: \u201cWhere are we as a team right now? Where do we want to be?\u201d Commit to one specific behavior to improve before next month.", prompt: (cult.rotationPrompts || [])[3] },
     ] }),
     pageNo: counter, pageTotal: PT16,
   }));
@@ -317,10 +321,10 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
           { lead: "Peer.", body: "\u201cWho on the team is living our values at the highest level right now?\u201d" },
           { lead: "Raise.", body: "\u201cWhat's one thing in the next 30 days to raise your game on a value?\u201d" },
         ] })
-      + `<div style="margin:22px 0 24px; border:1px solid var(--border-default); border-left:4px solid ${b.blue}; padding:16px 18px; background:rgba(31,111,178,0.03);">`
-        + `<div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin:0 0 8px;">Coaching Script — Worked Example</div>`
-        + `<div style="font-size:13px; line-height:1.6; color:var(--text-body);">Use each value's own language. For ` + P.esc((vals[0] && vals[0].name) || "a value") + `: <em>\u201cI want to talk about what happened on that job. Our standard is that we ` + P.esc(((vals[0] && vals[0].phrase) || "live this value").replace(/\.$/, "").toLowerCase()) + `. What I saw was [specific behavior]. That's not who we are. Going forward, I need [specific change]. Can I count on that?\u201d</em></div>`
-      + `</div>`
+      + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:22px 0 12px;">Coaching Script Examples</div>`
+      + (Array.isArray(cult.coachingScripts) && cult.coachingScripts.length
+          ? P.coachingScriptCards({ brand: b, items: cult.coachingScripts })
+          : `<div style="margin:0 0 24px; border-left:3px solid ${b.blue}; padding:10px 0 10px 16px;"><div style="font-size:12.5px; line-height:1.6; color:var(--text-body); font-style:italic;">Use each value's own language. For ` + P.esc((vals[0] && vals[0].name) || "a value") + `: \u201cI want to talk about what happened on that job. Our standard is that we ` + P.esc(((vals[0] && vals[0].phrase) || "live this value").replace(/\.$/, "").toLowerCase()) + `. What I saw was [specific behavior]. That's not who we are. Going forward, I need [specific change]. Can I count on that?\u201d</div></div>`)
       + `<div style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); margin:0 0 12px;">The Escalation Framework</div>`
       + P.metricTable({ brand: b,
           columns: ["Step", "Action", "What It Looks Like"],
@@ -350,14 +354,7 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
     intro: "Do not hire someone who does not align with our values — no matter how strong they look on paper. Use these questions and listen-fors in every interview.",
     inner:
       (vCount
-        ? vals.map((v) => {
-            const q = (v.hiringQuestions && v.hiringQuestions[0]) || {};
-            return `<div style="border:1px solid var(--border-default); border-left:4px solid ${b.blue}; padding:16px 18px; margin:0 0 16px; background:#fff;">
-              <div style="font-size:15px; font-weight:700; color:var(--text-strong); margin:0 0 8px;">${P.esc(v.name || "Core Value")}</div>
-              <div style="font-size:13.5px; font-weight:700; color:var(--text-strong); margin:0 0 8px; line-height:1.45;">\u201c${P.esc(q.question || v.question || "")}\u201d</div>
-              <div style="font-size:12.5px; line-height:1.55; color:var(--text-body);"><span style="font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:${b.blue}; font-size:10.5px;">Listen For</span>&nbsp;&nbsp;${P.esc(q.listenFor || "")}</div>
-            </div>`;
-          }).join("")
+        ? P.multiHiringCards({ brand: b, values: vals })
         : `<p style="margin:0; font-size:14px; color:var(--text-faint);">Your interview questions and listen-fors render here once your core values are captured.</p>`)
       + `<p style="margin:8px 0 0; font-size:12px; line-height:1.55; color:var(--text-faint); max-width:700px;">The full interview system — funnel, scoring rubrics, and decision matrix — lives in the Hiring &amp; Talent Development Playbook.</p>`,
     pageNo: counter, pageTotal: PT16,
@@ -378,7 +375,7 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
           columns: ["Decision", "Values Requirement"],
           colWidths: ["255px", "auto"],
           rows: [
-            ["Promote to Lead / Manager", "Must score 5 on at least " + (vCount >= 2 ? "2 of " + vCount : "the") + " values in the last scorecard. No 1s."],
+            ["Promote to Lead / Manager", "Must score 5 on at least " + (vCount >= 2 ? (vCount - 1) + " of " + vCount : "the") + " values in the last scorecard. No 1s."],
             ["Retain after a performance issue", "Ongoing values violations = exit. Skill gaps are trainable; values misalignment is not."],
             ["Extend probationary period", "Any score of 1 in the first 90 days triggers an automatic reset and review."],
             ["Re-hire / bring back", "Previous values violations = disqualification, regardless of technical skill."],
@@ -414,17 +411,33 @@ function buildCultureHTML({ ctx, brand, values, culture }) {
       { title: "Coach in the moment", body: "Don't let behavior misses slide. Address them the same day where possible." },
       { title: "Model the values yourself", body: "You cannot hold others to a standard you don't keep." },
       { title: "Hire and fire by the values", body: "Never hire someone who fails the values screen. Never retain someone who consistently violates them." },
-    ] }),
+      ...(cult.managerExpectationExtra ? [cult.managerExpectationExtra] : []),
+    ] })
+    + (cult.closingLine
+        ? `<div style="margin-top:24px; padding-top:18px; border-top:1px solid var(--border-subtle); font-size:13.5px; line-height:1.6; color:var(--text-body); font-weight:600; max-width:700px;">${P.esc(cult.closingLine)}</div>`
+        : ""),
     pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
 
-  // ── section-opener 09/09 The Standard Is Set (dark) + value tiles ──
+  // ── section-opener 09/09 The Standard Is Set (dark) + optional acronym tiles ──
+  // Acronym tiles render ONLY when culture.acronym is explicitly set AND its
+  // length matches the value count (guard against near-words / mismatched
+  // acronyms). Non-acronym tenants (Summit) get the clean closer, no gap.
+  const acronym = cult.acronym && typeof cult.acronym === "string" ? cult.acronym.trim() : "";
+  const tilesOk = acronym && vCount && acronym.replace(/[^A-Za-z]/g, "").length === vCount;
+  const acronymExtra = tilesOk
+    ? P.letterTileRow({ brand: b, dark: true,
+        tiles: acronym.replace(/[^A-Za-z]/g, "").split("").map((letter, i) => ({
+          letter, name: (vals[i] && vals[i].name) || "",
+        })) })
+    : "";
   push(P.sectionOpenerPage({
     brand: b, docTitle: DOC, sectionTitle: "The Standard Is Set",
     sectionNum: 9, sectionTotal: 9,
     headline: "This Is Our Standard.",
-    subhead: numberWord(vCount || 3).replace(/^\w/, (c) => c.toUpperCase()) + " values. One standard. Every seat, every day.",
+    subhead: (tilesOk ? acronym : (numberWord(vCount || 3).replace(/^\w/, (c) => c.toUpperCase()) + " values")) + ". One standard. Every seat, every day.",
+    extra: acronymExtra,
     pageNo: counter, pageTotal: PT16,
   }));
   counter += 1;
