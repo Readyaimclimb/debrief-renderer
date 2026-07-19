@@ -59,12 +59,14 @@ function loadLogo(file) {
   }
 }
 
-// Fixed base-brand marks — identical on EVERY tenant's playbook (Trueseat is the
-// product, RAC is the partner). These are not themeable and not per-client.
+// Fixed base-brand marks — identical on EVERY tenant's playbook. ONE brand:
+// Trueseat is the product and the only mark on a client deliverable. (The RAC
+// partner lockup was removed 2026-07-18 — RAC remains the operating LLC but is
+// deliberately invisible in product, so no deliverable implies delivery depends
+// on a named coaching firm.) These are not themeable and not per-client.
 const BRAND_LOGOS = {
   trueseat:     loadLogo("trueseat-logo.txt"),   // full "▢ Trueseat" lockup (reversed, for dark)
   trueseatMark: loadLogo("trueseat-mark.txt"),   // compact chair mark only
-  rac:          loadLogo("rac-logo.txt"),        // Ready Aim Climb mountain (white knocked out)
 };
 
 // Per-client logo resolver. A real client passes brand.branding.logo (light-bg
@@ -111,7 +113,6 @@ function buildPlaybookHTML({ ctx, brand, values }) {
     logos: {
       trueseat:     BRAND_LOGOS.trueseat,
       trueseatMark: BRAND_LOGOS.trueseatMark,
-      rac:          BRAND_LOGOS.rac,
       clientLight:  clientLogos.light,
       clientDark:   clientLogos.dark,
     },

@@ -2,7 +2,7 @@
   "name": "hire2scale-debrief-renderer",
   "version": "1.0.0",
   "private": true,
-  "description": "Standalone PDF rendering service for Hire2Scale debriefs (real Chrome via Docker).",
+  "description": "Standalone PDF rendering service for Trueseat debriefs (real Chrome via Docker).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

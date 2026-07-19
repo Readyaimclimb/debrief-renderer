@@ -643,20 +643,10 @@ function closingCtaPage({ brand, docTitle, eyebrow, headline, body, ctaLabel, ct
          <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">Powered by</div>
          <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Trueseat</div>
        </div>`;
-  const racBlock = bcLogos.rac
-    ? `<div>
-         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:9px;">In partnership with</div>
-         <img src="${bcLogos.rac}" alt="Ready Aim Climb" style="height:38px; display:block;">
-       </div>`
-    : `<div>
-         <div style="font-size:9px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:6px;">In partnership with</div>
-         <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.85);">Ready Aim Climb</div>
-       </div>`;
   const lockup = `
     <div style="position:absolute; left:64px; right:64px; bottom:44px; display:flex; justify-content:space-between; align-items:flex-end;">
       <div style="display:flex; align-items:center; gap:40px;">
         ${tsBlock}
-        ${racBlock}
       </div>
       <div style="text-align:right; font-size:10px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); line-height:1.6;">
         &copy; 2026 ${esc(brand.clientName || "")}<br>${esc(docTitle || "")} &middot; Confidential
