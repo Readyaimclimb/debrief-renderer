@@ -141,6 +141,104 @@ app.post("/onesheet-pdf", async (req, res) => {
   }
 });
 
+// ── /culture-pdf ─────────────────────────────────────────────────────────
+//  The authed sibling of /culture-proof. The app's forwarder (api/culture-pdf.js)
+//  POSTs { code }; we look up the client's REAL stored values[] + culture from
+//  clients.js (resolveClient → Redis, getClient fallback) and render the Culture
+//  Codified deck. Same warm Chrome, same 8.5×11, streamed back as a download.
+//  The renderer NEVER calls a model — it renders what the tenant already stored.
+app.post("/culture-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: "code is required" });
+    const clientsMod = await import("./clients.js");
+    const client = await clientsMod.resolveClient(code);
+    if (!client) return res.status(404).json({ error: "client not found" });
+
+    const values = Array.isArray(client.values) ? client.values : [];
+    const culture = client.culture || {};
+    if (values.length === 0 && !culture.purpose) {
+      return res.status(422).json({ error: "no_content", detail: "Add core values or a purpose before generating the Culture Codified." });
+    }
+
+    const b = client.branding || {};
+    const brand = {
+      code,
+      clientName: client.company || b.clientName || "Client",
+      navy: b.brandNavy || b.navy || "#171758",
+      blue: b.blue || b.accent || "#1F6FB2",
+      logoDark: b.logoDark || "",
+    };
+    const html = buildCultureHTML({ ctx: { company: brand.clientName }, brand, values, culture });
+
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const slug = (brand.clientName || "company").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}-culture.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("culture-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
+// ── /playbook-pdf ────────────────────────────────────────────────────────
+//  The authed sibling of /playbook-proof. Same { code } → resolveClient → render
+//  contract as /culture-pdf. The Hiring Playbook is built from the tenant's core
+//  values[] (buildPlaybookHTML derives the interview system + deck length from
+//  values.length). Streamed back as a download.
+app.post("/playbook-pdf", async (req, res) => {
+  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: "code is required" });
+    const clientsMod = await import("./clients.js");
+    const client = await clientsMod.resolveClient(code);
+    if (!client) return res.status(404).json({ error: "client not found" });
+
+    const values = Array.isArray(client.values) ? client.values : [];
+    if (values.length === 0) {
+      return res.status(422).json({ error: "no_content", detail: "Add core values before generating the Hiring Playbook." });
+    }
+
+    const b = client.branding || {};
+    const brand = {
+      code,
+      clientName: client.company || b.clientName || "Client",
+      navy: b.brandNavy || b.navy || "#171758",
+      blue: b.blue || b.accent || "#1F6FB2",
+      logoDark: b.logoDark || "",
+    };
+    const html = buildPlaybookHTML({ ctx: { company: brand.clientName }, brand, values });
+
+    const browser = await getBrowser();
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
+    await page.close();
+    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+    const slug = (brand.clientName || "company").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}-hiring-playbook.pdf"`);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    res.status(200).end(pdfBuffer);
+  } catch (err) {
+    console.error("playbook-pdf error:", err);
+    res.status(500).json({ error: "PDF generation failed", detail: String(err && err.message || err) });
+  }
+});
+
 app.post("/roadmap-pdf", async (req, res) => {
   if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
     return res.status(401).json({ error: "unauthorized" });
