@@ -25,9 +25,10 @@ const { buildRoadmapHTML } = require("./roadmap-engine.js");
 const { buildDefinitionHTML } = require("./definition-engine.js");
 const { buildJobAdHTML } = require("./jobad-engine.js");
 const { buildOneSheetHTML } = require("./assemble-onesheet.js");
-const { buildPlaybookHTML } = require("./assemble-playbook.js"); // PROOF: one-page Arimo font test — remove with its route after verifying
-const { buildCultureHTML } = require("./assemble-culture.js"); // Culture Codified deck — /culture-proof now; authed route at collapse
+const { buildPlaybookHTML } = require("./assemble-playbook.js");
+const { buildCultureHTML } = require("./assemble-culture.js");
 const { extractDominantColors } = require("./sampler.js");
+const { checkPublicHttpUrl, defaultLookup } = require("./public-url.js");
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -38,8 +39,9 @@ app.use(express.json({ limit: "2mb" }));
 // never cause one client's PDF to borrow another client's (or RAC's) logo.
 // (The old CD_FALLBACK_LOGO_DARK was removed for exactly this reason.)
 
-// ── optional shared secret: only requests that know this token are served.
-//    Set RENDER_SHARED_SECRET on Render; the Vercel forwarder sends it. ──
+// ── shared secret. Set RENDER_SHARED_SECRET on Render; the Vercel forwarder
+//    sends it as x-render-secret. Unset or empty fails closed: protected
+//    routes refuse the request instead of serving it. ──
 const SHARED_SECRET = process.env.RENDER_SHARED_SECRET || null;
 
 // keep one browser warm across requests (faster; Render service stays up)
@@ -54,13 +56,24 @@ function getBrowser() {
   return browserPromise;
 }
 
+// True when the response has already been ended.
+function denyUnauthed(req, res) {
+  if (!SHARED_SECRET) {
+    res.status(503).json({ error: "unauthorized" });
+    return true;
+  }
+  if (req.get("x-render-secret") !== SHARED_SECRET) {
+    res.status(401).json({ error: "unauthorized" });
+    return true;
+  }
+  return false;
+}
+
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 app.post("/debrief-pdf", async (req, res) => {
   // auth check (if a secret is configured)
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { report, ctx, brand } = req.body || {};
     if (!report || !ctx || !brand) {
@@ -106,9 +119,7 @@ app.post("/debrief-pdf", async (req, res) => {
 //  One Sheet assembler (which reuses debrief-engine.js for one shared styling
 //  system), renders with the same warm Chrome, streams the PDF back.
 app.post("/onesheet-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { prep_blocks, ctx, brand } = req.body || {};
     if (!prep_blocks || !ctx || !brand) {
@@ -142,15 +153,13 @@ app.post("/onesheet-pdf", async (req, res) => {
 });
 
 // ── /culture-pdf ─────────────────────────────────────────────────────────
-//  The authed sibling of /culture-proof. The app's forwarder (api/culture-pdf.js)
+//  The app's forwarder (api/culture-pdf.js)
 //  POSTs { code }; we look up the client's REAL stored values[] + culture from
 //  clients.js (resolveClient → Redis, getClient fallback) and render the Culture
 //  Codified deck. Same warm Chrome, same 8.5×11, streamed back as a download.
 //  The renderer NEVER calls a model — it renders what the tenant already stored.
 app.post("/culture-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: "code is required" });
@@ -192,14 +201,12 @@ app.post("/culture-pdf", async (req, res) => {
 });
 
 // ── /playbook-pdf ────────────────────────────────────────────────────────
-//  The authed sibling of /playbook-proof. Same { code } → resolveClient → render
+//  Same { code } → resolveClient → render
 //  contract as /culture-pdf. The Hiring Playbook is built from the tenant's core
 //  values[] (buildPlaybookHTML derives the interview system + deck length from
 //  values.length). Streamed back as a download.
 app.post("/playbook-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { code } = req.body || {};
     if (!code) return res.status(400).json({ error: "code is required" });
@@ -240,9 +247,7 @@ app.post("/playbook-pdf", async (req, res) => {
 });
 
 app.post("/roadmap-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { roadmap, ctx, brand } = req.body || {};
     if (!roadmap || !ctx || !brand) {
@@ -283,9 +288,7 @@ app.post("/roadmap-pdf", async (req, res) => {
 //  (which reuses debrief-engine.js for one shared styling system), renders with
 //  the same warm Chrome, streams the PDF back.
 app.post("/definition-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { definition, ctx, brand } = req.body || {};
     if (!definition || !ctx || !brand) {
@@ -321,9 +324,7 @@ app.post("/definition-pdf", async (req, res) => {
 //  assembled jobad (from the app's buildJobAd()), builds the HTML via the job
 //  ad engine, renders with the same warm Chrome, streams the PDF back.
 app.post("/jobad-pdf", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
-  }
+  if (denyUnauthed(req, res)) return;
   try {
     const { jobad, ctx, brand } = req.body || {};
     if (!jobad || !ctx || !brand) {
@@ -356,192 +357,6 @@ app.post("/jobad-pdf", async (req, res) => {
   }
 });
 
-// ── /playbook-proof ─────────────────────────────────────────────────────────
-//  TEMPORARY one-page proof. Renders page 6 of the Hiring Playbook ("No
-//  Scorecard. No Search.") to confirm the embedded Arimo webfont + table +
-//  navy callout render correctly in this service's headless Chrome before the
-//  full Playbook/Culture decks are built. GET so it opens directly in a browser.
-//  No auth on purpose (throwaway). DELETE this route + its require +
-//  assemble-playbook.js/playbook-pages.js are kept for the full build; this
-//  route is the only throwaway. Remove after the diff passes.
-app.get("/playbook-proof", async (req, res) => {
-  try {
-    // Summit's 3 core values, transcribed verbatim off the reference decks
-    // (Hiring Playbook pp.16-18 + Culture Codified pp.5-7). Inlined here because
-    // this route is throwaway — deleted once the render diff passes. The real
-    // build reads values[] from the tenant's live clients.js config.
-    const PROOF_VALUES = [
-      {
-        name: "Extreme Ownership",
-        definition: "We own outcomes, not excuses. When something fails on our watch, we fix it and we say so.",
-        question: "Tell me about a time something failed and it was your fault. What happened next?",
-        probes: [
-          "What did it cost \u2014 you, the team, the customer?",
-          "What specifically did you change afterward, and is it still in place?",
-          "Who else could confirm the story the way you're telling it?",
-        ],
-        listenFor: [
-          "Describes the failure in first person, without blaming circumstances or predecessors",
-          "Names what they changed after the failure \u2014 not just what went wrong",
-          "Can point to a system or habit that exists today because of it",
-        ],
-        rubric: {
-          concern: "Describes the failure in third person. Circumstances, predecessors, or teammates carry the blame.",
-          developing: "Owns the miss when pressed, but cannot name what specifically changed afterward.",
-          strong: "First-person ownership, a specific change that followed, and a system or habit still in place today.",
-        },
-      },
-      {
-        name: "Do What You Say",
-        definition: "Commitments are sacred. We close every loop \u2014 or renegotiate it out loud before the deadline.",
-        question: "Tell me about a commitment you realized you couldn't keep. What did you do, and when?",
-        probes: [
-          "At what point did you know it was at risk?",
-          "Who did you tell, and how early?",
-          "What did it cost you to raise it instead of staying quiet?",
-        ],
-        listenFor: [
-          "Gives examples of keeping commitments at personal cost",
-          "Renegotiates proactively rather than going quiet when a commitment is at risk",
-          "Flags risk early \u2014 the timeline in the story is measured in days, not hours before the deadline",
-        ],
-        rubric: {
-          concern: "Went quiet, hoped nobody noticed, or reframes the miss as someone else's misunderstanding.",
-          developing: "Told someone eventually, but late \u2014 closer to the deadline than to the moment they knew.",
-          strong: "Flagged it early, renegotiated openly, and can name what it cost them to do so.",
-        },
-      },
-      {
-        name: "We Before Me",
-        definition: "The team's win outranks personal credit. We share information, share credit, and back decisions we argued against.",
-        question: "Tell me about a decision you argued hard against \u2014 and lost. What did you do after?",
-        probes: [
-          "How did you argue it \u2014 and when did you stop arguing?",
-          "What did you say to the team once the decision was made?",
-          "Did you execute it fully, or slow-walk it?",
-        ],
-        listenFor: [
-          "Credits others by name when describing wins",
-          "Supports majority decisions they personally opposed",
-          "Separates the disagreement (before) from the execution (after) cleanly",
-        ],
-        rubric: {
-          concern: "Wins are \u201cI,\u201d failures are \u201cthey.\u201d Undermined or slow-walked decisions they disagreed with.",
-          developing: "Backed the decision publicly but you can hear lingering resentment or half-effort.",
-          strong: "Names teammates in wins without prompting; executed the opposed decision fully and says why that mattered.",
-        },
-      },
-    ];
-    const html = buildPlaybookHTML({
-      ctx: { company: "Summit Mechanical" },
-      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
-      values: PROOF_VALUES,
-    });
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
-    await page.close();
-    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="playbook-proof.pdf"`);
-    res.setHeader("Content-Length", pdfBuffer.length);
-    res.status(200).end(pdfBuffer);
-  } catch (err) {
-    console.error("playbook-proof error:", err);
-    res.status(500).json({ error: "proof failed", detail: String(err && err.message || err) });
-  }
-});
-
-// ── /culture-proof ───────────────────────────────────────────────────────
-//  TEMPORARY full-deck proof for Culture Codified. THROWAWAY like
-//  /playbook-proof — no auth, GET so it opens in a browser; both proofs
-//  collapse into authed routes together. Deliberately feeds Summit's values in
-//  the STORED clients.js shape (name/definition/behaviors/question/anchor1/
-//  anchor4 — NOT the enriched standards/hiringQuestions shape), because that
-//  is what a real tenant's record carries today: this proves the assembler's
-//  defensive adapter derives the ladder + hiring pages from live-shaped data.
-//  culture {purpose, mission} mirrors the seeded summit-2026 client record.
-app.get("/culture-proof", async (req, res) => {
-  try {
-    const PROOF_STORED_VALUES = [
-      {
-        name: "Extreme Ownership",
-        definition: "We own outcomes, not excuses. When something fails on our watch, we fix it and we say so.",
-        behaviors: [
-          "Describes failures in first person, without blaming circumstances or predecessors",
-          "Names what they changed after a failure \u2014 not just what went wrong",
-        ],
-        question: "Tell me about a time something failed and it was your fault. What happened next?",
-        anchor1: "Blames the team, the market, or the boss. \u201cFailure\u201d story is really a story about other people.",
-        anchor4: "Unprompted ownership, names the cost, and describes the specific system or habit they changed afterward.",
-      },
-      {
-        name: "Do What You Say",
-        definition: "Commitments are sacred. We close every loop \u2014 or renegotiate it out loud before the deadline.",
-        behaviors: [
-          "Gives examples of keeping commitments at personal cost",
-          "Renegotiates proactively rather than going quiet when a commitment is at risk",
-        ],
-        question: "Tell me about a commitment you realized you couldn't keep. What did you do, and when?",
-        anchor1: "Went quiet, hoped nobody noticed, or reframes the miss as someone else's misunderstanding.",
-        anchor4: "Flagged it early, renegotiated openly, and can name what it cost them to do so.",
-      },
-      {
-        name: "We Before Me",
-        definition: "The team's win outranks personal credit. We share information, share credit, and back decisions we argued against.",
-        behaviors: [
-          "Credits others by name when describing wins",
-          "Supports majority decisions they personally opposed",
-        ],
-        question: "Tell me about a decision you argued hard against \u2014 and lost. What did you do after?",
-        anchor1: "Wins are \u201cI,\u201d failures are \u201cthey.\u201d Undermined or slow-walked decisions they disagreed with.",
-        anchor4: "Names teammates in wins without prompting; executed the opposed decision fully and says why that mattered.",
-      },
-    ];
-    // Read Summit's REAL enriched record from clients.js (ESM → dynamic import
-    // from CommonJS) so the proof renders the live data — verbatim ladders,
-    // manager tips, coaching scripts, multi-hiring, acronym field — exactly what
-    // the authed route will feed. Previously this route inlined a thin stub,
-    // which is why enriched clients.js changes didn't surface. Falls back to the
-    // inline stub only if the import/lookup fails, so the route never hard-errors.
-    let proofValues, proofCulture;
-    try {
-      const clientsMod = await import("./clients.js");
-      const summit = clientsMod.getClient("summit-2026");
-      proofValues = summit.values;
-      proofCulture = summit.culture;
-    } catch (e) {
-      console.error("culture-proof: clients.js load failed, using inline stub:", e && e.message);
-      proofValues = PROOF_STORED_VALUES;
-      proofCulture = {
-        acronym: null,
-        purpose: "To hold a standard most companies only talk about \u2014 in every install, every service call, every conversation between teammates.",
-        mission: "At Summit Mechanical, commitments mean something and execution is a discipline, not a hope. We build heating, cooling, and controls systems that last \u2014 and a team that lasts alongside them.",
-      };
-    }
-    const html = buildCultureHTML({
-      ctx: { company: "Summit Mechanical" },
-      brand: { code: "summit-2026", clientName: "Summit Mechanical", navy: "#171758", blue: "#1F6FB2" },
-      values: proofValues,
-      culture: proofCulture,
-    });
-    const browser = await getBrowser();
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdf = await page.pdf({ width: "8.5in", height: "11in", printBackground: true });
-    await page.close();
-    const pdfBuffer = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="culture-proof.pdf"`);
-    res.setHeader("Content-Length", pdfBuffer.length);
-    res.status(200).end(pdfBuffer);
-  } catch (err) {
-    console.error("culture-proof error:", err);
-    res.status(500).json({ error: "proof failed", detail: String(err && err.message || err) });
-  }
-});
-
 // ── /site-colors ─────────────────────────────────────────────────────────
 //  Load a URL in REAL Chrome (so JS-applied color, image logos, and external
 //  stylesheets all render), screenshot the above-the-fold view, and sample the
@@ -549,58 +364,93 @@ app.get("/culture-proof", async (req, res) => {
 //  "pull colors from the website" — it sees the rendered page, not the raw HTML,
 //  so it gets a brand's true green/purple instead of structural framework hexes.
 //
-//  Request:  { url }                       (plus x-render-secret if configured)
+//  Request:  { url }                       (plus x-render-secret)
 //  Response: { colors: ["#aabbcc", ...], readable: true }
 //            { colors: [], readable: false, reason }   on failure (never throws
 //            up the stack so the caller can fall back to logo-color extraction).
-app.post("/site-colors", async (req, res) => {
-  if (SHARED_SECRET && req.get("x-render-secret") !== SHARED_SECRET) {
-    return res.status(401).json({ error: "unauthorized" });
+//  Private, loopback, link-local, and internal hosts are refused before Chrome
+//  fetches. The same check runs again on every request, including redirects.
+const deps = {
+  lookup: defaultLookup,
+  screenshot: screenshotPublicPage,
+};
+
+function colorFailure(res, reason) {
+  const status = reason === "blocked_host" ? 400 : 200;
+  return res.status(status).json({ colors: [], readable: false, reason });
+}
+
+async function reviewBrowserRequest(request, guard) {
+  let verdict;
+  try {
+    verdict = await guard(request.url());
+  } catch (err) {
+    try { await request.abort("failed"); } catch (_) {}
+    return { blockedNav: !!request.isNavigationRequest() };
   }
+  if (!verdict || !verdict.ok) {
+    try { await request.abort("blockedbyclient"); } catch (_) {}
+    return { blockedNav: !!request.isNavigationRequest() && verdict && verdict.reason === "blocked_host" };
+  }
+  await request.continue();
+  return { blockedNav: false };
+}
+
+async function screenshotPublicPage(target, guard) {
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  let blockedNav = false;
+  try {
+    await page.setViewport({ width: 1280, height: 900 });
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    );
+    await page.setRequestInterception(true);
+    page.on("request", async (request) => {
+      const decision = await reviewBrowserRequest(request, guard);
+      if (decision.blockedNav) blockedNav = true;
+    });
+    await page.goto(target, { waitUntil: "networkidle2", timeout: 15000 });
+    if (blockedNav) {
+      const err = new Error("blocked_host");
+      err.reason = "blocked_host";
+      throw err;
+    }
+    await new Promise((r) => setTimeout(r, 600));
+    return await page.screenshot({ type: "png", fullPage: false });
+  } catch (err) {
+    const msg = String((err && err.message) || err);
+    if (blockedNav || (err && err.reason === "blocked_host") || /ERR_BLOCKED_BY_CLIENT|blockedbyclient/i.test(msg)) {
+      const blocked = new Error("blocked_host");
+      blocked.reason = "blocked_host";
+      throw blocked;
+    }
+    throw err;
+  } finally {
+    try { await page.close(); } catch (_) {}
+  }
+}
+
+app.post("/site-colors", async (req, res) => {
+  if (denyUnauthed(req, res)) return;
   const { url } = req.body || {};
   if (!url || typeof url !== "string") {
     return res.status(400).json({ error: "url is required" });
   }
 
-  // Normalize: prepend https:// when no scheme; reject anything that isn't a
-  // valid http(s) URL so we never hand Chrome garbage.
-  let target;
+  const guard = (nextUrl) => checkPublicHttpUrl(nextUrl, deps.lookup);
+  const verdict = await guard(url);
+  if (!verdict.ok) return colorFailure(res, verdict.reason);
+
   try {
-    const withScheme = /^https?:\/\//i.test(url.trim()) ? url.trim() : "https://" + url.trim();
-    const u = new URL(withScheme);
-    if (u.protocol !== "http:" && u.protocol !== "https:") {
-      return res.status(200).json({ colors: [], readable: false, reason: "bad_url" });
-    }
-    target = u.toString();
-  } catch {
-    return res.status(200).json({ colors: [], readable: false, reason: "bad_url" });
-  }
-
-  let page;
-  try {
-    const browser = await getBrowser();
-    page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 900 });
-    // A real UA helps with sites that sniff for bots.
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
-    );
-    // Bounded navigation: give the page up to 15s to reach a settled state.
-    await page.goto(target, { waitUntil: "networkidle2", timeout: 15000 });
-    // Small settle for fonts/hero imagery to paint.
-    await new Promise((r) => setTimeout(r, 600));
-
-    const shot = await page.screenshot({ type: "png", fullPage: false });
-    await page.close(); page = null;
-
+    const shot = await deps.screenshot(verdict.href, guard);
     const colors = await extractDominantColors(shot, 6);
     if (!colors.length) {
       return res.status(200).json({ colors: [], readable: false, reason: "empty" });
     }
     return res.status(200).json({ colors, readable: true });
   } catch (err) {
-    if (page) { try { await page.close(); } catch (_) {} }
-    // Classify the failure so the caller can show an honest message.
+    if (err && err.reason === "blocked_host") return colorFailure(res, "blocked_host");
     const msg = String((err && err.message) || err);
     let reason = "unreachable";
     if (/timeout/i.test(msg)) reason = "timeout";
@@ -611,5 +461,12 @@ app.post("/site-colors", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Debrief PDF service listening on ${PORT}`));
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  const server = app.listen(PORT, () => {
+    const addr = server.address();
+    console.log(`Debrief PDF service listening on ${addr && addr.port || PORT}`);
+  });
+}
+
+module.exports = { app, deps, reviewBrowserRequest };
