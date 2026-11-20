@@ -43,33 +43,26 @@ function buildOneSheetHTML({ prep_blocks, ctx, brand, logoDark }) {
     out.push(P.blockPage(b, "Role competency", brand, pageNo));
   }
 
-  // 5 · PI job-fit (the moat). LIVE per-drive predictions when the candidate
-  // Job-Fit data path resolved (block.live / not locked); otherwise the honest
-  // LOCKED capability card. The divider lead shifts to match: a candidate read
-  // when live, a capability pitch when locked.
-  // 5 · PI job-fit (the moat). Three routes, by block state:
-  //   live        — real per-drive predictions (block.live, not locked).
-  //   needs-match — PI on + role target ready, but this candidate isn't matched
-  //                 to PI (block.needsMatch). A quiet "add their email" card —
-  //                 fail-loud, never the FOMO teaser. The divider lead names the
-  //                 gap honestly rather than pitching a candidate read it can't show.
-  //   locked      — PI off / awaiting data. The honest capability (FOMO) card.
+  // 5 · Seat range. Ranges and interview questions when the block is live or
+  // seatOnly. needs-match names a missing email. locked is the card with no
+  // target yet. None of these pages label or predict the candidate.
   for (const b of piBlocks) {
     const isLive = b.live === true && b.locked !== true;
-    const needsMatch = b.needsMatch === true && !isLive;
+    const seatPage = isLive || b.seatOnly === true;
+    const needsMatch = b.needsMatch === true && !seatPage;
     pageNo++;
-    out.push(P.dividerPage("PI job-fit", "Will the fit last.",
-      isLive
-        ? "Where this person's natural wiring fits the seat — and where it stretches. The stretches are what to probe, and what to support in the first 90 days."
+    out.push(P.dividerPage("Seat range", "What this seat asks for.",
+      seatPage
+        ? "The ranges below describe this seat. The questions are there to explore in the interview."
         : needsMatch
-          ? "PI is on and this role's target is ready — we just need to match this candidate to their Predictive Index to show the fit."
-          : "Not whether they can do the job — whether they'll do it well, sustainably, over the long haul.",
+          ? "This role's target range is ready. An email is still needed to match this person in Predictive Index."
+          : "This page describes the behavioral range the seat is built for.",
       brand, pageNo));
     pageNo++;
     out.push(
-      isLive      ? P.livePiPage(b, "PI job-fit", brand, pageNo) :
-      needsMatch  ? P.needsMatchPiPage(b, "PI job-fit", brand, pageNo) :
-                    P.lockedPiPage(b, "PI job-fit", brand, pageNo)
+      seatPage    ? P.livePiPage(b, "Seat range", brand, pageNo) :
+      needsMatch  ? P.needsMatchPiPage(b, "Seat range", brand, pageNo) :
+                    P.lockedPiPage(b, "Seat range", brand, pageNo)
     );
   }
 
